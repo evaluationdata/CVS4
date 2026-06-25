@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestione CVS</title>
+<style>
+:root {
+  --primary: #1565c0;
+  --primary-dark: #0d47a1;
+  --primary-light: #42a5f5;
+  --accent: #00897b;
+  --accent-light: #26a69a;
+  --danger: #c62828;
+  --danger-light: #ef5350;
+  --warning: #f9a825;
+  --success: #2e7d32;
+  --bg: #f0f2f5;
+  --card: #ffffff;
+  --text: #212529;
+  --text-secondary: #5f6368;
+  --border: #dadce0;
+  --shadow: 0 1px 3px rgba(60,64,67,0.15);
+  --shadow-lg: 0 4px 12px rgba(60,64,67,0.2);
+  --radius: 8px;
+  --sidebar-w: 260px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  overflow: hidden;
+}
+#login-screen {
+  display:flex; align-items:center; justify-content:center;
+  height:100vh;
+  background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--accent) 100%);
+}
+.login-box {
+  background: var(--card);
+  padding: 40px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 420px;
+  text-align: center;
+}
+.login-box h1 { font-size: 1.6rem; color: var(--primary); margin-bottom: 6px; font-weight: 700; }
+.login-box .subtitle { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 28px; text-transform: uppercase; letter-spacing: 1px; }
+.login-box .logo-icon { font-size: 3rem; margin-bottom: 10px; }
+.form-group { margin-bottom: 18px; text-align: left; }
+.form-group label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+input[type="text"], input[type="password"], input[type="email"],
+input[type="date"], input[type="number"], input[type="time"],
+select, textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fff;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(21,101,192,0.1);
+}
+textarea { resize: vertical; min-height: 80px; }
+.btn {
+  display: inline-flex; align-items:center; justify-content:center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-success { background: var(--accent); color: #fff; }
+.btn-success:hover { background: #00796b; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-danger:hover { background: #b71c1c; }
+.btn-secondary { background: #e8eaed; color: var(--text); }
+.btn-secondary:hover { background: #dadce0; }
+.btn-sm { padding: 6px 12px; font-size: 0.8rem; }
+.btn-block { width: 100%; }
+.login-btn { padding: 12px; font-size: 1rem; margin-top: 8px; }
+
+#app { display: none; height: 100vh; }
+.sidebar {
+  position: fixed;
+  left: 0; top: 0;
+  width: var(--sidebar-w);
+  height: 100vh;
+  background: #1a237e;
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  z-index: 100;
+  overflow-y: auto;
+}
+.sidebar-header { padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+.sidebar-header h2 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.sidebar-header .version { font-size: 0.65rem; opacity: 0.6; margin-top: 4px; letter-spacing: 1px; }
+.user-card { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 0.82rem; }
+.user-card .role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+.role-admin { background: var(--danger-light); color: #fff; }
+.role-manager { background: var(--warning); color: #333; }
+.role-viewer { background: var(--primary-light); color: #fff; }
+.nav-menu { flex: 1; padding: 10px 0; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.88rem;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  color: rgba(255,255,255,0.85);
+  text-decoration: none;
+}
+.nav-item:hover { background: rgba(255,255,255,0.08); color: #fff; }
+.nav-item.active { background: rgba(255,255,255,0.12); border-left-color: var(--accent-light); color: #fff; }
+.nav-icon { font-size: 1.1rem; width: 22px; text-align: center; }
+.sidebar-footer { padding: 14px 20px; border-top: 1px solid rgba(255,255,255,0.1); }
+.sidebar-footer .btn { width: 100%; background: rgba(255,255,255,0.1); color: #fff; }
+.sidebar-footer .btn:hover { background: rgba(255,255,255,0.2); }
+.main-content { margin-left: var(--sidebar-w); height: 100vh; overflow-y: auto; padding: 24px 28px; }
+
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px; }
+.page-header h1 { font-size: 1.4rem; font-weight: 700; color: var(--text); }
+.page-header .actions { display: flex; gap: 10px; }
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 20px; }
+.card-title { font-size: 1rem; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; color: var(--text); }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+.kpi-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px 20px; border-left: 4px solid var(--primary); transition: transform 0.2s, box-shadow 0.2s; }
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+.kpi-card .kpi-label { font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+.kpi-card .kpi-value { font-size: 1.8rem; font-weight: 800; color: var(--text); margin-top: 6px; }
+.kpi-card.kpi-danger { border-left-color: var(--danger); }
+.kpi-card.kpi-success { border-left-color: var(--success); }
+.kpi-card.kpi-warning { border-left-color: var(--warning); }
+.kpi-card.kpi-accent { border-left-color: var(--accent); }
+
+.chart-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+@media (max-width: 900px) { .chart-container { grid-template-columns: 1fr; } }
+
+.css-chart .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.css-chart .bar-label { width: 120px; font-size: 0.8rem; color: var(--text-secondary); text-align: right; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.css-chart .bar-track { flex: 1; height: 24px; background: #e8eaed; border-radius: 4px; overflow: hidden; }
+.css-chart .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; display: flex; align-items: center; padding-right: 8px; justify-content: flex-end; color: #fff; font-size: 0.75rem; font-weight: 600; }
+.css-chart .bar-fill.blue { background: var(--primary); }
+.css-chart .bar-fill.teal { background: var(--accent); }
+.css-chart .bar-fill.red { background: var(--danger-light); }
+.css-chart .bar-fill.orange { background: #ef6c00; }
+
+.data-table { width: 100%; border-collapse: collapse; }
+.data-table thead th {
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+}
+.data-table tbody td { padding: 12px 14px; font-size: 0.88rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+.data-table tbody tr:hover { background: #f8f9fa; }
+.data-table tbody tr.clickable { cursor: pointer; }
+.data-table tbody tr.clickable:hover { background: #e3f2fd; }
+
+.badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; }
+.badge-aperta { background: #fff3cd; color: #856404; }
+.badge-chiusa { background: #d4edda; color: #155724; }
+.badge-incorso { background: #cce5ff; color: #004085; }
+.badge-grave { background: #f8d7da; color: #721c24; }
+.badge-lieve { background: #d1ecf1; color: #0c5460; }
+
+.form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.form-grid .form-group.full { grid-column: 1 / -1; }
+.form-section { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.form-section-title { font-size: 0.85rem; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 2px solid var(--border); }
+.tab { padding: 10px 18px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+.tab:hover { color: var(--primary); }
+.tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.active { display: flex; }
+.modal-box { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow-lg); width: 100%; max-width: 700px; max-height: 90vh; overflow-y: auto; padding: 24px; }
+.modal-box.wide { max-width: 960px; }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h2 { font-size: 1.15rem; }
+.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-secondary); width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+.modal-close:hover { background: #f0f0f0; }
+
+.search-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+.search-bar input, .search-bar select { flex: 1; min-width: 180px; }
+
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.detail-item .label { font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 4px; }
+.detail-item .value { font-size: 0.92rem; font-weight: 600; color: var(--text); }
+
+.toast { position: fixed; bottom: 24px; right: 24px; padding: 14px 22px; border-radius: var(--radius); color: #fff; font-weight: 600; font-size: 0.88rem; z-index: 300; transform: translateY(100px); opacity: 0; transition: all 0.3s; box-shadow: var(--shadow-lg); }
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+
+.spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty-state { text-align: center; padding: 40px; color: var(--text-secondary); }
+.empty-state .icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.4; }
+
+.ps-header { background: linear-gradient(135deg, var(--primary-dark), var(--primary)); color: #fff; padding: 20px 24px; border-radius: var(--radius); margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.ps-header h2 { font-size: 1.3rem; font-weight: 700; }
+.ps-header .ps-meta { font-size: 0.82rem; opacity: 0.85; }
+.ps-header .btn { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); }
+.ps-header .btn:hover { background: rgba(255,255,255,0.25); }
+.ps-tabs { display: flex; gap: 0; margin-bottom: 20px; background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.ps-tab { flex: 1; padding: 14px 18px; cursor: pointer; font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); text-align: center; border-bottom: 3px solid transparent; transition: all 0.2s; background: none; border-top: none; border-left: none; border-right: 1px solid var(--border); }
+.ps-tab:last-child { border-right: none; }
+.ps-tab:hover { color: var(--primary); background: #f8f9fa; }
+.ps-tab.active { color: var(--primary); border-bottom-color: var(--primary); background: #fff; }
+.ps-panel { display: none; }
+.ps-panel.active { display: block; }
+.ps-selettore { max-width: 600px; margin: 40px auto; text-align: center; }
+.ps-selettore h2 { margin-bottom: 20px; color: var(--primary); }
+.ps-str-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 20px; }
+.ps-str-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; text-align: left; }
+.ps-str-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lg); border-color: var(--primary-light); }
+.ps-str-card .str-nome { font-weight: 700; font-size: 1rem; margin-bottom: 6px; color: var(--text); }
+.ps-str-card .str-meta { font-size: 0.8rem; color: var(--text-secondary); }
+.ps-str-card .str-icon { font-size: 2rem; margin-bottom: 10px; }
+
+@media print { .sidebar, .page-header .actions, .btn { display: none !important; } .main-content { margin-left: 0; } }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #bdbdbd; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #9e9e9e; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+.status-dot.aperta { background: var(--warning); }
+.status-dot.chiusa { background: var(--success); }
+.status-dot.incorso { background: var(--primary); }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════ LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo-icon">&#x2695;&#xFE0F;</div>
+    <h1>Gestione CVS</h1>
+    <div class="subtitle">Clinical Risk Management</div>
+    <div id="login-error" style="color:var(--danger);font-size:0.85rem;margin-bottom:14px;display:none;"></div>
+    <form id="login-form" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="login-user" required autocomplete="username" placeholder="Inserisci username">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-pw" required autocomplete="current-password" placeholder="Inserisci password">
+      </div>
+      <button type="submit" class="btn btn-primary btn-block login-btn" id="login-btn">
+        <span>Accedi</span>
+      </button>
+    </form>
+    <div style="margin-top:18px;font-size:0.78rem;color:var(--text-secondary);">
+      Inserisci le credenziali fornite dall'amministratore
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ APP -->
+<div id="app">
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2><span style="font-size:1.3rem;">&#x2695;&#xFE0F;</span> Gestione CVS</h2>
+      <div class="version">v2.0 &mdash; Clinical Risk</div>
+    </div>
+    <div class="user-card">
+      <div style="font-weight:700;" id="user-name">-</div>
+      <div style="opacity:0.7;font-size:0.75rem;" id="user-struttura">-</div>
+      <span class="role-badge" id="user-role">-</span>
+    </div>
+    <div class="nav-menu" id="nav-menu">
+      <a class="nav-item active" data-page="dashboard" onclick="navigate('dashboard')">
+        <span class="nav-icon">&#x1F4CA;</span> Dashboard
+      </a>
+      <a class="nav-item" data-page="strutture" onclick="navigate('strutture')">
+        <span class="nav-icon">&#x1F3E5;</span> Strutture
+      </a>
+      <a class="nav-item" data-page="pratiche" onclick="navigate('pratiche')">
+        <span class="nav-icon">&#x1F4CB;</span> Pratiche
+      </a>
+      <a class="nav-item" data-page="cvs" onclick="navigate('cvs')">
+        <span class="nav-icon">&#x1F465;</span> CVS Professionisti
+      </a>
+      <a class="nav-item" data-page="agenda" onclick="navigate('agenda')">
+        <span class="nav-icon">&#x1F4C5;</span> Agenda
+      </a>
+      <a class="nav-item" data-page="pannello" onclick="navigate('pannello')">
+        <span class="nav-icon">&#x1F3E2;</span> Pannello Struttura
+      </a>
+      <a class="nav-item admin-only" data-page="utenti" onclick="navigate('utenti')" style="display:none;">
+        <span class="nav-icon">&#x1F464;</span> Utenti
+      </a>
+      <a class="nav-item admin-only" data-page="audit" onclick="navigate('audit')" style="display:none;">
+        <span class="nav-icon">&#x1F4DD;</span> Audit Log
+      </a>
+    </div>
+    <div class="sidebar-footer">
+      <button class="btn" onclick="logout()">
+        <span>&#x1F6AA;</span> Disconnetti
+      </button>
+    </div>
+  </nav>
+
+  <main class="main-content" id="main-content">
+    <!-- Pages injected here -->
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modal-box">
+    <div class="modal-header">
+      <h2 id="modal-title">Titolo</h2>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   GESTIONE CVS - JAVASCRIPT FRONTEND CORRETTO
+   ═══════════════════════════════════════════════════════════════ */
+
+var STATE = {
+  token: localStorage.getItem('cvs_token') || null,
+  user: null,
+  strutture: [],
+  pratiche: [],
+  cvs: [],
+  agenda: [],
+  utenti: [],
+  audit: [],
+  currentPage: 'dashboard',
+  modalCallback: null
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (STATE.token) {
+    checkSessionAndLoad();
+  }
+});
+
+function handleLogin(e) {
+  e.preventDefault();
+  var user = document.getElementById('login-user').value.trim();
+  var pw = document.getElementById('login-pw').value;
+  var btn = document.getElementById('login-btn');
+  var err = document.getElementById('login-error');
+
+  btn.innerHTML = '<span class="spinner"></span> Accesso...';
+  btn.disabled = true;
+  err.style.display = 'none';
+
+  google.script.run
+    .withSuccessHandler(function(res) {
+      btn.innerHTML = '<span>Accedi</span>';
+      btn.disabled = false;
+      if (res.success) {
+        STATE.token = res.token;
+        STATE.user = res.user;
+        localStorage.setItem('cvs_token', res.token);
+        showApp();
+      } else {
+        err.textContent = res.error || 'Errore di accesso';
+        err.style.display = 'block';
+      }
+    })
+    .withFailureHandler(function(e) {
+      btn.innerHTML = '<span>Accedi</span>';
+      btn.disabled = false;
+      err.textContent = 'Errore di connessione: ' + e.message;
+      err.style.display = 'block';
+    })
+    .login(user, pw);
+}
+
+function checkSessionAndLoad() {
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.valid) {
+        STATE.user = res.user;
+        showApp();
+      } else {
+        localStorage.removeItem('cvs_token');
+        STATE.token = null;
+      }
+    })
+    .withFailureHandler(function() {
+      localStorage.removeItem('cvs_token');
+      STATE.token = null;
+    })
+    .checkSession(STATE.token);
+}
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('user-name').textContent = STATE.user.username;
+  document.getElementById('user-struttura').textContent = STATE.user.strutturaNome || '-';
+  var rb = document.getElementById('user-role');
+  rb.textContent = STATE.user.ruolo;
+  rb.className = 'role-badge role-' + STATE.user.ruolo;
+
+  if (STATE.user.ruolo === 'admin') {
+    document.querySelectorAll('.admin-only').forEach(function(el) { el.style.display = 'flex'; });
+  }
+  navigate('dashboard');
+}
+
+function logout() {
+  if (STATE.token) {
+    google.script.run.logout(STATE.token);
+  }
+  localStorage.removeItem('cvs_token');
+  STATE.token = null;
+  STATE.user = null;
+  location.reload();
+}
+
+function navigate(page) {
+  STATE.currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(function(n) { n.classList.remove('active'); });
+  var active = document.querySelector('.nav-item[data-page="' + page + '"]');
+  if (active) active.classList.add('active');
+
+  var container = document.getElementById('main-content');
+  container.innerHTML = '<div class="empty-state"><span class="spinner"></span><br>Caricamento...</div>';
+
+  switch(page) {
+    case 'dashboard': loadDashboard(); break;
+    case 'strutture': loadStrutture(); break;
+    case 'pratiche': loadPratiche(); break;
+    case 'cvs': loadCVS(); break;
+    case 'agenda': loadAgenda(); break;
+    case 'pannello': loadPannelloStruttura(); break;
+    case 'utenti': loadUtenti(); break;
+    case 'audit': loadAudit(); break;
+    default: loadDashboard();
+  }
+}
+
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type || 'success') + ' show';
+  setTimeout(function() { t.classList.remove('show'); }, 3000);
+}
+
+function openModal(title, html, isWide) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-box').className = 'modal-box' + (isWide ? ' wide' : '');
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  if (STATE.modalCallback) { STATE.modalCallback(); STATE.modalCallback = null; }
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function fmtDate(s) {
+  if (!s) return '-';
+  var d = new Date(s);
+  if (isNaN(d)) return String(s).substring(0,10);
+  return d.toLocaleDateString('it-IT');
+}
+function getStrutturaNome(id) {
+  for (var i = 0; i < STATE.strutture.length; i++) {
+    if (STATE.strutture[i].id === id) return STATE.strutture[i].nome;
+  }
+  return id || '-';
+}
+function struttureOptions(selected) {
+  var h = '';
+  for (var i = 0; i < STATE.strutture.length; i++) {
+    var s = STATE.strutture[i];
+    h += '<option value="' + escHtml(s.id) + '"' + (s.id === selected ? ' selected' : '') + '>' + escHtml(s.nome) + '</option>';
+  }
+  return h;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function loadDashboard() {
+  google.script.run
+    .withSuccessHandler(function(kpi) {
+      if (kpi.error) { showToast(kpi.error, 'error'); return; }
+      renderDashboard(kpi);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getKpi(STATE.token);
+}
+
+function renderDashboard(kpi) {
+  var container = document.getElementById('main-content');
+  var strEntries = [];
+  for (var k in kpi.perStruttura) {
+    strEntries.push({ name: kpi.perStrutturaNomi[k] || k, value: kpi.perStruttura[k] });
+  }
+  strEntries.sort(function(a,b){ return b.value - a.value; });
+  var maxStr = strEntries.length > 0 ? strEntries[0].value : 1;
+
+  var html = '';
+  html += '<div class="page-header"><h1>&#x1F4CA; Dashboard</h1><div class="actions"><button class="btn btn-secondary btn-sm" onclick="loadDashboard()">&#x1F504; Aggiorna</button></div></div>';
+
+  html += '<div class="kpi-grid">';
+  html += '<div class="kpi-card"><div class="kpi-label">Pratiche Totali</div><div class="kpi-value">' + kpi.totali + '</div></div>';
+  html += '<div class="kpi-card kpi-warning"><div class="kpi-label">Aperte</div><div class="kpi-value">' + kpi.aperte + '</div></div>';
+  html += '<div class="kpi-card kpi-success"><div class="kpi-label">Chiuse</div><div class="kpi-value">' + kpi.chiuse + '</div></div>';
+  html += '<div class="kpi-card kpi-accent"><div class="kpi-label">In Corso</div><div class="kpi-value">' + kpi.inCorso + '</div></div>';
+  html += '<div class="kpi-card kpi-danger"><div class="kpi-label">Eventi Gravi+</div><div class="kpi-value">' + kpi.gravi + '</div></div>';
+  html += '</div>';
+
+  html += '<div class="chart-container">';
+  html += '<div class="card"><div class="card-title">&#x1F3E5; Pratiche per Struttura</div><div class="css-chart">';
+  var colors = ['blue','teal','red','orange','blue','teal','red','orange'];
+  for (var i = 0; i < Math.min(strEntries.length, 8); i++) {
+    var pct = Math.round((strEntries[i].value / maxStr) * 100);
+    html += '<div class="bar-row"><span class="bar-label" title="' + escHtml(strEntries[i].name) + '">' + escHtml(strEntries[i].name) + '</span>';
+    html += '<div class="bar-track"><div class="bar-fill ' + colors[i] + '" style="width:' + pct + '%">' + strEntries[i].value + '</div></div></div>';
+  }
+  if (strEntries.length === 0) html += '<div class="empty-state">Nessun dato</div>';
+  html += '</div></div>';
+
+  html += '<div class="card"><div class="card-title">&#x26A0;&#xFE0F; Distribuzione per Gravit&agrave;</div><div class="css-chart">';
+  var gravKeys = ['lieve','moderata','grave','gravissima'];
+  var gravLabels = ['Lieve','Moderata','Grave','Gravissima'];
+  var gravColors = ['blue','teal','orange','red'];
+  var maxGrav = Math.max(kpi.perGravita.lieve, kpi.perGravita.moderata, kpi.perGravita.grave, kpi.perGravita.gravissima, 1);
+  for (var g = 0; g < 4; g++) {
+    var gv = kpi.perGravita[gravKeys[g]];
+    var gpct = Math.round((gv / maxGrav) * 100);
+    html += '<div class="bar-row"><span class="bar-label">' + gravLabels[g] + '</span>';
+    html += '<div class="bar-track"><div class="bar-fill ' + gravColors[g] + '" style="width:' + gpct + '%">' + gv + '</div></div></div>';
+  }
+  html += '</div></div>';
+  html += '</div>';
+
+  html += '<div class="card"><div class="card-title">&#x1F4E2; Attivit&agrave; Recente</div>';
+  html += '<div style="font-size:0.85rem;color:var(--text-secondary);">Usa il menu laterale per navigare tra le sezioni.</div>';
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  STRUTTURE
+// ═══════════════════════════════════════════════════════════════
+function loadStrutture() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      STATE.strutture = data;
+      renderStrutture();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getStrutture(STATE.token);
+}
+
+function renderStrutture() {
+  var container = document.getElementById('main-content');
+  var isAdmin = STATE.user.ruolo === 'admin';
+  var html = '<div class="page-header"><h1>&#x1F3E5; Strutture Sanitarie</h1>';
+  if (isAdmin) html += '<div class="actions"><button class="btn btn-primary" onclick="openStrutturaForm()">+ Nuova Struttura</button></div>';
+  html += '</div>';
+
+  html += '<div class="card">';
+  html += '<div class="search-bar"><input type="text" id="str-search" placeholder="Cerca struttura..." oninput="filterStrutture()"></div>';
+  html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
+  html += '<th>Nome</th><th>Tipo</th><th>Citt&agrave;</th><th>Prov.</th><th>Telefono</th><th>Email</th><th>Direttore</th>';
+  html += '<th style="width:140px;">Azioni</th>';
+  html += '</tr></thead><tbody id="strutture-tbody">';
+  html += renderStruttureRows(STATE.strutture);
+  html += '</tbody></table></div></div>';
+
+  container.innerHTML = html;
+}
+
+function renderStruttureRows(rows) {
+  if (rows.length === 0) return '<tr><td colspan="8" class="empty-state">Nessuna struttura trovata</td></tr>';
+  var isAdmin = STATE.user.ruolo === 'admin';
+  var h = '';
+  for (var i = 0; i < rows.length; i++) {
+    var s = rows[i];
+    h += '<tr class="clickable" onclick="viewStruttura(\'' + escHtml(s.id) + '\')">';
+    h += '<td><strong>' + escHtml(s.nome) + '</strong></td>';
+    h += '<td>' + escHtml(s.tipo) + '</td>';
+    h += '<td>' + escHtml(s.citta) + '</td>';
+    h += '<td>' + escHtml(s.provincia) + '</td>';
+    h += '<td>' + escHtml(s.telefono) + '</td>';
+    h += '<td>' + escHtml(s.email) + '</td>';
+    h += '<td>' + escHtml(s.direttore) + '</td>';
+    h += '<td>';
+    h += '<button class="btn btn-sm btn-success" style="background:var(--accent);" onclick="event.stopPropagation();openPannelloStrutturaId(\'' + escHtml(s.id) + '\')" title="Pannello Struttura">&#x1F3E2;</button> ';
+    if (isAdmin) {
+      h += '<button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openStrutturaForm(\'' + escHtml(s.id) + '\')">&#x270F;&#xFE0F;</button> ';
+      h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deleteStruttura(\'' + escHtml(s.id) + '\')">&#x1F5D1;&#xFE0F;</button>';
+    }
+    h += '</td>';
+    h += '</tr>';
+  }
+  return h;
+}
+
+function filterStrutture() {
+  var q = document.getElementById('str-search').value.toLowerCase();
+  var filtered = STATE.strutture.filter(function(s) {
+    return (s.nome||'').toLowerCase().indexOf(q) !== -1 || (s.citta||'').toLowerCase().indexOf(q) !== -1 || (s.tipo||'').toLowerCase().indexOf(q) !== -1;
+  });
+  document.getElementById('strutture-tbody').innerHTML = renderStruttureRows(filtered);
+}
+
+function viewStruttura(id) {
+  var s = STATE.strutture.find(function(x){ return x.id === id; });
+  if (!s) return;
+  var html = '<div class="detail-grid">';
+  html += '<div class="detail-item"><div class="label">ID</div><div class="value">' + escHtml(s.id) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Nome</div><div class="value">' + escHtml(s.nome) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Tipo</div><div class="value">' + escHtml(s.tipo) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Via</div><div class="value">' + escHtml(s.via) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Citt&agrave;</div><div class="value">' + escHtml(s.citta) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Provincia</div><div class="value">' + escHtml(s.provincia) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">CAP</div><div class="value">' + escHtml(s.cap) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Telefono</div><div class="value">' + escHtml(s.telefono) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Email</div><div class="value">' + escHtml(s.email) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Direttore</div><div class="value">' + escHtml(s.direttore) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Email Accesso</div><div class="value">' + escHtml(s.emailAccesso) + '</div></div>';
+  html += '</div>';
+  openModal('Dettaglio Struttura', html);
+}
+
+function openStrutturaForm(id) {
+  var s = id ? STATE.strutture.find(function(x){ return x.id === id; }) : null;
+  var html = '<form onsubmit="saveStruttura(event)">';
+  html += '<input type="hidden" id="str-id" value="' + (s ? escHtml(s.id) : '') + '">';
+  html += '<div class="form-grid">';
+  html += '<div class="form-group"><label>Nome *</label><input type="text" id="str-nome" required value="' + (s ? escHtml(s.nome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tipo</label><select id="str-tipo"><option value="">Seleziona...</option><option value="ospedale"' + (s && s.tipo==='ospedale'?' selected':'') + '>Ospedale</option><option value="casa di cura"' + (s && s.tipo==='casa di cura'?' selected':'') + '>Casa di Cura</option><option value="clinica"' + (s && s.tipo==='clinica'?' selected':'') + '>Clinica</option><option value="rsa"' + (s && s.tipo==='rsa'?' selected':'') + '>RSA</option><option value="altro"' + (s && s.tipo==='altro'?' selected':'') + '>Altro</option></select></div>';
+  html += '<div class="form-group"><label>Via</label><input type="text" id="str-via" value="' + (s ? escHtml(s.via) : '') + '"></div>';
+  html += '<div class="form-group"><label>Citt&agrave;</label><input type="text" id="str-citta" value="' + (s ? escHtml(s.citta) : '') + '"></div>';
+  html += '<div class="form-group"><label>Provincia</label><input type="text" id="str-prov" maxlength="2" value="' + (s ? escHtml(s.provincia) : '') + '"></div>';
+  html += '<div class="form-group"><label>CAP</label><input type="text" id="str-cap" maxlength="5" value="' + (s ? escHtml(s.cap) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="str-tel" value="' + (s ? escHtml(s.telefono) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="str-email" value="' + (s ? escHtml(s.email) : '') + '"></div>';
+  html += '<div class="form-group"><label>Direttore</label><input type="text" id="str-dir" value="' + (s ? escHtml(s.direttore) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email Accesso</label><input type="email" id="str-acc-email" value="' + (s ? escHtml(s.emailAccesso) : '') + '"></div>';
+  html += '<div class="form-group"><label>Password Accesso</label><input type="text" id="str-acc-pw" value="' + (s ? escHtml(s.passwordAccesso) : '') + '"></div>';
+  html += '</div>';
+  html += '<div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button><button type="submit" class="btn btn-primary">Salva</button></div>';
+  html += '</form>';
+  openModal(s ? 'Modifica Struttura' : 'Nuova Struttura', html, true);
+}
+
+function saveStruttura(e) {
+  e.preventDefault();
+  var obj = {
+    id: document.getElementById('str-id').value,
+    nome: document.getElementById('str-nome').value,
+    tipo: document.getElementById('str-tipo').value,
+    via: document.getElementById('str-via').value,
+    citta: document.getElementById('str-citta').value,
+    provincia: document.getElementById('str-prov').value,
+    cap: document.getElementById('str-cap').value,
+    telefono: document.getElementById('str-tel').value,
+    email: document.getElementById('str-email').value,
+    direttore: document.getElementById('str-dir').value,
+    emailAccesso: document.getElementById('str-acc-email').value,
+    passwordAccesso: document.getElementById('str-acc-pw').value
+  };
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      closeModal();
+      showToast('Struttura salvata');
+      loadStrutture();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .salvaStruttura(STATE.token, obj);
+}
+
+function deleteStruttura(id) {
+  if (!confirm('Eliminare questa struttura?')) return;
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      showToast('Struttura eliminata');
+      loadStrutture();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .eliminaStruttura(STATE.token, id);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PRATICHE
+// ═══════════════════════════════════════════════════════════════
+function loadPratiche() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      STATE.pratiche = data || [];
+      google.script.run
+        .withSuccessHandler(function(str) {
+          STATE.strutture = str;
+          renderPratiche();
+          filterPratiche();
+        })
+        .getStrutture(STATE.token);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getPratiche(STATE.token, '');
+}
+
+function renderPratiche() {
+  var container = document.getElementById('main-content');
+  var isAdmin = STATE.user.ruolo === 'admin';
+  var html = '<div class="page-header"><h1>&#x1F4CB; Pratiche / Sinistri</h1>';
+  html += '<div class="actions"><button class="btn btn-primary" onclick="openPraticaForm()">+ Nuova Pratica</button></div>';
+  html += '</div>';
+
+  html += '<div class="card">';
+  html += '<div class="search-bar">';
+  html += '<input type="text" id="pra-search" placeholder="Cerca per paziente, protocollo, reparto..." oninput="filterPratiche()">';
+  html += '<select id="pra-filtro-str" onchange="filterPratiche()"><option value="">Tutte le strutture</option>' + struttureOptions() + '</select>';
+  html += '<select id="pra-filtro-esito" onchange="filterPratiche()"><option value="">Tutti gli esiti</option><option value="in_corso">In Corso</option><option value="chiusa">Chiusa</option><option value="archiviata">Archiviata</option></select>';
+  html += '</div>';
+
+  html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
+  html += '<th>Protocollo</th><th>Struttura</th><th>Data Evento</th><th>Paziente</th><th>Reparto</th><th>Tipo</th><th>Gravit&agrave;</th><th>Esito</th>';
+  if (isAdmin) html += '<th style="width:100px;">Azioni</th>';
+  html += '</tr></thead><tbody id="pratiche-tbody">';
+  
+  if (STATE.pratiche && Array.isArray(STATE.pratiche) && STATE.pratiche.length > 0) {
+    html += renderPraticheRows(STATE.pratiche);
+  } else {
+    html += '<tr><td colspan="9" class="empty-state">Nessuna pratica trovata</td></tr>';
+  }
+  
+  html += '</tbody></table></div></div>';
+
+  container.innerHTML = html;
+}
+
+function renderPraticheRows(rows) {
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return '<tr><td colspan="9" class="empty-state">Nessuna pratica trovata</td></tr>';
+  }
+  var isAdmin = STATE.user.ruolo === 'admin';
+  var h = '';
+  for (var i = 0; i < rows.length; i++) {
+    var p = rows[i];
+    if (!p) continue;
+    var gravClass = p.gravita === 'grave' || p.gravita === 'gravissima' ? 'badge-grave' : (p.gravita === 'lieve' ? 'badge-lieve' : 'badge-aperta');
+    var esitoClass = p.esito === 'chiusa' ? 'badge-chiusa' : (p.esito === 'in_corso' ? 'badge-incorso' : 'badge-aperta');
+    var dotClass = p.esito === 'chiusa' ? 'chiusa' : (p.esito === 'in_corso' ? 'incorso' : 'aperta');
+    h += '<tr class="clickable" onclick="viewPratica(' + i + ')">';
+    h += '<td><strong>' + escHtml(p.numero_protocollo) + '</strong></td>';
+    h += '<td>' + escHtml(getStrutturaNome(p.strutturaId)) + '</td>';
+    h += '<td>' + fmtDate(p.data_evento) + '</td>';
+    h += '<td>' + escHtml(p.cognome_paziente) + ' ' + escHtml(p.nome_paziente) + '</td>';
+    h += '<td>' + escHtml(p.reparto) + '</td>';
+    h += '<td>' + escHtml(p.tipo_evento) + '</td>';
+    h += '<td><span class="badge ' + gravClass + '">' + escHtml(p.gravita) + '</span></td>';
+    h += '<td><span class="status-dot ' + dotClass + '"></span><span class="badge ' + esitoClass + '">' + escHtml(p.esito) + '</span></td>';
+    if (isAdmin) {
+      h += '<td><button class="btn btn-sm btn-secondary" onclick="event.stopPropagation();openPraticaForm(' + i + ')">&#x270F;&#xFE0F;</button> ';
+      h += '<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();deletePratica(' + i + ')">&#x1F5D1;&#xFE0F;</button></td>';
+    }
+    h += '</tr>';
+  }
+  return h;
+}
+
+function filterPratiche() {
+  if (!STATE.pratiche || !Array.isArray(STATE.pratiche) || STATE.pratiche.length === 0) {
+    var el = document.getElementById('pratiche-tbody');
+    if (el) el.innerHTML = '<tr><td colspan="9" class="empty-state">Nessuna pratica trovata</td></tr>';
+    return;
+  }
+  var q = document.getElementById('pra-search').value.toLowerCase();
+  var fs = document.getElementById('pra-filtro-str').value;
+  var fe = document.getElementById('pra-filtro-esito').value;
+  var filtered = STATE.pratiche.filter(function(p) {
+    if (!p) return false;
+    var matchQ = !q || (p.nome_paziente||'').toLowerCase().indexOf(q)!==-1 || (p.cognome_paziente||'').toLowerCase().indexOf(q)!==-1 || (p.numero_protocollo||'').toLowerCase().indexOf(q)!==-1 || (p.reparto||'').toLowerCase().indexOf(q)!==-1;
+    var matchS = !fs || p.strutturaId === fs;
+    var matchE = !fe || p.esito === fe;
+    return matchQ && matchS && matchE;
+  });
+  var el = document.getElementById('pratiche-tbody');
+  if (el) el.innerHTML = renderPraticheRows(filtered);
+}
+
+function viewPratica(idx) {
+  var p = STATE.pratiche[idx];
+  if (!p) return;
+  var html = '<div style="max-height:60vh;overflow-y:auto;">';
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4C4; Anagrafica Pratica</div><div class="detail-grid">';
+  html += '<div class="detail-item"><div class="label">Protocollo</div><div class="value">' + escHtml(p.numero_protocollo) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Struttura</div><div class="value">' + escHtml(getStrutturaNome(p.strutturaId)) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Data Apertura</div><div class="value">' + fmtDate(p.data_apertura) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Data Evento</div><div class="value">' + fmtDate(p.data_evento) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Reparto</div><div class="value">' + escHtml(p.reparto) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Tipo Evento</div><div class="value">' + escHtml(p.tipo_evento) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Gravit&agrave;</div><div class="value">' + escHtml(p.gravita) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Esito</div><div class="value">' + escHtml(p.esito) + '</div></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F476; Paziente</div><div class="detail-grid">';
+  html += '<div class="detail-item"><div class="label">Nome</div><div class="value">' + escHtml(p.nome_paziente) + ' ' + escHtml(p.cognome_paziente) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Codice Fiscale</div><div class="value">' + escHtml(p.cf_paziente) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Medico</div><div class="value">' + escHtml(p.medico) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Descrizione</div><div class="value">' + escHtml(p.descrizione) + '</div></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x2696;&#xFE0F; Dati Legali e Assicurativi</div><div class="detail-grid">';
+  html += '<div class="detail-item"><div class="label">Legale</div><div class="value">' + escHtml(p.legale) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Studio</div><div class="value">' + escHtml(p.studio) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Email Legale</div><div class="value">' + escHtml(p.emailLegale) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Tel. Legale</div><div class="value">' + escHtml(p.telefonoLegale) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Polizza Assicurativa</div><div class="value">' + escHtml(p.polizzaAssicurativa) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Impresa Assicuratrice</div><div class="value">' + escHtml(p.impresaAssicuratrice) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">SIR</div><div class="value">' + escHtml(p.sir) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Quota SIR</div><div class="value">' + escHtml(p.quotaSir) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Franchigia</div><div class="value">' + escHtml(p.franchigia) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Quota Franchigia</div><div class="value">' + escHtml(p.quotaFranchigia) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Valutato</div><div class="value">' + escHtml(p.valutato) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Tribunale</div><div class="value">' + escHtml(p.tribunale) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">N. Ruolo</div><div class="value">' + escHtml(p.numeroRuolo) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">CTU Invalidit&agrave;</div><div class="value">' + escHtml(p.ctuInvalidita) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">CTU Inabilit&agrave;</div><div class="value">' + escHtml(p.ctuInabilita) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Proposta Conciliativa</div><div class="value">' + escHtml(p.propostaConciliativa) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Data Proposta</div><div class="value">' + fmtDate(p.dataProposta) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Valore Offerta</div><div class="value">' + escHtml(p.valoreOfferta) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Importo Liquidato</div><div class="value">' + escHtml(p.importoLiquidato) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Data Liquidazione</div><div class="value">' + fmtDate(p.dataLiquidazione) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Esito Legale</div><div class="value">' + escHtml(p.esitoLegale) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Data Chiusura</div><div class="value">' + fmtDate(p.dataChiusura) + '</div></div>';
+  html += '<div class="detail-item"><div class="label">Ultimo Aggiornamento</div><div class="value">' + fmtDate(p.ultimoAggiornamento) + '</div></div>';
+  html += '<div class="detail-item full"><div class="label">Note</div><div class="value">' + escHtml(p.note) + '</div></div>';
+  html += '</div></div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">';
+  html += '<button class="btn btn-primary" onclick="closeModal();openPraticaForm(' + idx + ')">&#x270F;&#xFE0F; Modifica</button>';
+  html += '<button class="btn btn-secondary" onclick="closeModal()">Chiudi</button></div>';
+
+  openModal('Dettaglio Pratica ' + escHtml(p.numero_protocollo), html, true);
+}
+
+function openPraticaForm(idx) {
+  var p = (idx !== undefined && STATE.pratiche[idx]) ? STATE.pratiche[idx] : null;
+  var html = '<form onsubmit="savePratica(event)">';
+  html += '<input type="hidden" id="pra-rowidx" value="' + (p ? (idx+2) : '') + '">';
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4C4; Dati Generali</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Struttura *</label><select id="pra-struttura" required><option value="">Seleziona...</option>' + struttureOptions(p ? p.strutturaId : '') + '</select></div>';
+  html += '<div class="form-group"><label>N. Protocollo *</label><input type="text" id="pra-protocollo" required value="' + (p ? escHtml(p.numero_protocollo) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Apertura</label><input type="date" id="pra-data-apertura" value="' + (p && p.data_apertura ? String(p.data_apertura).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Evento *</label><input type="date" id="pra-data-evento" required value="' + (p && p.data_evento ? String(p.data_evento).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Reparto</label><input type="text" id="pra-reparto" value="' + (p ? escHtml(p.reparto) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tipo Evento</label><select id="pra-tipo"><option value="">Seleziona...</option><option value="danno"' + (p && p.tipo_evento==='danno'?' selected':'') + '>Danno</option><option value="morte"' + (p && p.tipo_evento==='morte'?' selected':'') + '>Morte</option><option value="infezione"' + (p && p.tipo_evento==='infezione'?' selected':'') + '>Infezione</option><option value="caduta"' + (p && p.tipo_evento==='caduta'?' selected':'') + '>Caduta</option><option value="errore terapeutico"' + (p && p.tipo_evento==='errore terapeutico'?' selected':'') + '>Errore Terapeutico</option><option value="altro"' + (p && p.tipo_evento==='altro'?' selected':'') + '>Altro</option></select></div>';
+  html += '<div class="form-group"><label>Gravit&agrave;</label><select id="pra-gravita"><option value="">Seleziona...</option><option value="lieve"' + (p && p.gravita==='lieve'?' selected':'') + '>Lieve</option><option value="moderata"' + (p && p.gravita==='moderata'?' selected':'') + '>Moderata</option><option value="grave"' + (p && p.gravita==='grave'?' selected':'') + '>Grave</option><option value="gravissima"' + (p && p.gravita==='gravissima'?' selected':'') + '>Gravissima</option></select></div>';
+  html += '<div class="form-group"><label>Esito</label><select id="pra-esito"><option value="in_corso"' + (p && p.esito==='in_corso'?' selected':'') + '>In Corso</option><option value="chiusa"' + (p && p.esito==='chiusa'?' selected':'') + '>Chiusa</option><option value="archiviata"' + (p && p.esito==='archiviata'?' selected':'') + '>Archiviata</option></select></div>';
+  html += '<div class="form-group"><label>Medico</label><input type="text" id="pra-medico" value="' + (p ? escHtml(p.medico) : '') + '"></div>';
+  html += '<div class="form-group full"><label>Descrizione</label><textarea id="pra-descrizione">' + (p ? escHtml(p.descrizione) : '') + '</textarea></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F476; Paziente</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome Paziente</label><input type="text" id="pra-pnome" value="' + (p ? escHtml(p.nome_paziente) : '') + '"></div>';
+  html += '<div class="form-group"><label>Cognome Paziente</label><input type="text" id="pra-pcognome" value="' + (p ? escHtml(p.cognome_paziente) : '') + '"></div>';
+  html += '<div class="form-group"><label>Codice Fiscale</label><input type="text" id="pra-pcf" maxlength="16" value="' + (p ? escHtml(p.cf_paziente) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x2696;&#xFE0F; Dati Legali</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Legale</label><input type="text" id="pra-legale" value="' + (p ? escHtml(p.legale) : '') + '"></div>';
+  html += '<div class="form-group"><label>Studio Legale</label><input type="text" id="pra-studio" value="' + (p ? escHtml(p.studio) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email Legale</label><input type="email" id="pra-email-legale" value="' + (p ? escHtml(p.emailLegale) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tel. Legale</label><input type="text" id="pra-tel-legale" value="' + (p ? escHtml(p.telefonoLegale) : '') + '"></div>';
+  html += '<div class="form-group"><label>Polizza Assicurativa</label><input type="text" id="pra-polizza" value="' + (p ? escHtml(p.polizzaAssicurativa) : '') + '"></div>';
+  html += '<div class="form-group"><label>Impresa Assicuratrice</label><input type="text" id="pra-impresa" value="' + (p ? escHtml(p.impresaAssicuratrice) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tribunale</label><input type="text" id="pra-tribunale" value="' + (p ? escHtml(p.tribunale) : '') + '"></div>';
+  html += '<div class="form-group"><label>N. Ruolo</label><input type="text" id="pra-ruolo" value="' + (p ? escHtml(p.numeroRuolo) : '') + '"></div>';
+  html += '<div class="form-group"><label>Proposta Conciliativa</label><input type="text" id="pra-conciliativa" value="' + (p ? escHtml(p.propostaConciliativa) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Proposta</label><input type="date" id="pra-data-proposta" value="' + (p && p.dataProposta ? String(p.dataProposta).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Valore Offerta (&euro;)</label><input type="number" step="0.01" id="pra-offerta" value="' + (p ? escHtml(p.valoreOfferta) : '') + '"></div>';
+  html += '<div class="form-group"><label>Importo Liquidato (&euro;)</label><input type="number" step="0.01" id="pra-liquidato" value="' + (p ? escHtml(p.importoLiquidato) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Liquidazione</label><input type="date" id="pra-data-liq" value="' + (p && p.dataLiquidazione ? String(p.dataLiquidazione).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Esito Legale</label><input type="text" id="pra-esito-legale" value="' + (p ? escHtml(p.esitoLegale) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Chiusura</label><input type="date" id="pra-data-chiusura" value="' + (p && p.dataChiusura ? String(p.dataChiusura).substring(0,10) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4C8; Dati Economici</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Ammontare (&euro;)</label><input type="number" step="0.01" id="pra-ammontare" value="' + (p ? escHtml(p.ammontare) : '') + '"></div>';
+  html += '<div class="form-group"><label>Invalidit&agrave;</label><input type="text" id="pra-invalidita" value="' + (p ? escHtml(p.invalidita) : '') + '"></div>';
+  html += '<div class="form-group"><label>Riserva (&euro;)</label><input type="number" step="0.01" id="pra-riserva" value="' + (p ? escHtml(p.riserva) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Delibera</label><input type="date" id="pra-data-delibera" value="' + (p && p.dataDelibera ? String(p.dataDelibera).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>SIR</label><input type="text" id="pra-sir" value="' + (p ? escHtml(p.sir) : '') + '"></div>';
+  html += '<div class="form-group"><label>Quota SIR (&euro;)</label><input type="number" step="0.01" id="pra-quota-sir" value="' + (p ? escHtml(p.quotaSir) : '') + '"></div>';
+  html += '<div class="form-group"><label>Franchigia</label><input type="text" id="pra-franchigia" value="' + (p ? escHtml(p.franchigia) : '') + '"></div>';
+  html += '<div class="form-group"><label>Quota Franchigia (&euro;)</label><input type="number" step="0.01" id="pra-quota-fran" value="' + (p ? escHtml(p.quotaFranchigia) : '') + '"></div>';
+  html += '<div class="form-group"><label>Valutato</label><input type="text" id="pra-valutato" value="' + (p ? escHtml(p.valutato) : '') + '"></div>';
+  html += '<div class="form-group"><label>CTU Invalidit&agrave;</label><input type="text" id="pra-ctu-inv" value="' + (p ? escHtml(p.ctuInvalidita) : '') + '"></div>';
+  html += '<div class="form-group"><label>CTU Inabilit&agrave;</label><input type="text" id="pra-ctu-ina" value="' + (p ? escHtml(p.ctuInabilita) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4DD; Note</div>';
+  html += '<div class="form-group full"><textarea id="pra-note" rows="3">' + (p ? escHtml(p.note) : '') + '</textarea></div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button><button type="submit" class="btn btn-primary">Salva Pratica</button></div>';
+  html += '</form>';
+  openModal(p ? 'Modifica Pratica' : 'Nuova Pratica', html, true);
+}
+
+function savePratica(e) {
+  e.preventDefault();
+  var rowIdx = document.getElementById('pra-rowidx').value;
+  var orig = null;
+  if (rowIdx) {
+    var arrIdx = parseInt(rowIdx) - 2;
+    if (STATE.pratiche[arrIdx]) orig = STATE.pratiche[arrIdx];
+  }
+  var obj = {
+    _rowIndex: rowIdx || '',
+    strutturaId: document.getElementById('pra-struttura').value,
+    numero_protocollo: document.getElementById('pra-protocollo').value,
+    data_apertura: document.getElementById('pra-data-apertura').value,
+    data_evento: document.getElementById('pra-data-evento').value,
+    reparto: document.getElementById('pra-reparto').value,
+    descrizione: document.getElementById('pra-descrizione').value,
+    nome_paziente: document.getElementById('pra-pnome').value,
+    cognome_paziente: document.getElementById('pra-pcognome').value,
+    cf_paziente: document.getElementById('pra-pcf').value,
+    tipo_evento: document.getElementById('pra-tipo').value,
+    gravita: document.getElementById('pra-gravita').value,
+    esito: document.getElementById('pra-esito').value,
+    medico: document.getElementById('pra-medico').value,
+    dataRichiesta: orig ? orig.dataRichiesta : '',
+    tipoRichiesta: orig ? orig.tipoRichiesta : '',
+    ammontare: document.getElementById('pra-ammontare').value,
+    invalidita: document.getElementById('pra-invalidita').value,
+    riserva: document.getElementById('pra-riserva').value,
+    dataDelibera: document.getElementById('pra-data-delibera').value,
+    legale: document.getElementById('pra-legale').value,
+    studio: document.getElementById('pra-studio').value,
+    emailLegale: document.getElementById('pra-email-legale').value,
+    telefonoLegale: document.getElementById('pra-tel-legale').value,
+    polizzaAssicurativa: document.getElementById('pra-polizza').value,
+    impresaAssicuratrice: document.getElementById('pra-impresa').value,
+    sir: document.getElementById('pra-sir').value,
+    quotaSir: document.getElementById('pra-quota-sir').value,
+    franchigia: document.getElementById('pra-franchigia').value,
+    quotaFranchigia: document.getElementById('pra-quota-fran').value,
+    valutato: document.getElementById('pra-valutato').value,
+    tribunale: document.getElementById('pra-tribunale').value,
+    numeroRuolo: document.getElementById('pra-ruolo').value,
+    ctuInvalidita: document.getElementById('pra-ctu-inv').value,
+    ctuInabilita: document.getElementById('pra-ctu-ina').value,
+    propostaConciliativa: document.getElementById('pra-conciliativa').value,
+    dataProposta: document.getElementById('pra-data-proposta').value,
+    valoreOfferta: document.getElementById('pra-offerta').value,
+    importoLiquidato: document.getElementById('pra-liquidato').value,
+    dataLiquidazione: document.getElementById('pra-data-liq').value,
+    esitoLegale: document.getElementById('pra-esito-legale').value,
+    dataChiusura: document.getElementById('pra-data-chiusura').value,
+    note: document.getElementById('pra-note').value
+  };
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      closeModal();
+      showToast('Pratica salvata');
+      loadPratiche();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .salvaPratica(STATE.token, obj);
+}
+
+function deletePratica(arrIdx) {
+  var p = STATE.pratiche[arrIdx];
+  if (!p) return;
+  if (!confirm('Eliminare la pratica ' + p.numero_protocollo + '?')) return;
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      showToast('Pratica eliminata');
+      loadPratiche();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .eliminaPratica(STATE.token, arrIdx + 2);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  CVS PROFESSIONISTI
+// ═══════════════════════════════════════════════════════════════
+function loadCVS() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      STATE.cvs = data;
+      google.script.run
+        .withSuccessHandler(function(str) { STATE.strutture = str; renderCVS(); })
+        .getStrutture(STATE.token);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getTeam(STATE.token, '');
+}
+
+function renderCVS() {
+  var container = document.getElementById('main-content');
+  var html = '<div class="page-header"><h1>&#x1F465; CVS Professionisti</h1></div>';
+  html += '<div class="card">';
+  html += '<div class="search-bar">';
+  html += '<select id="cvs-filtro-str" onchange="filterCVS()"><option value="">Tutte le strutture</option>' + struttureOptions() + '</select>';
+  html += '<button class="btn btn-primary" onclick="openCVSForm()">+ Assegna CVS</button>';
+  html += '</div>';
+  html += '<div id="cvs-container">';
+  html += renderCVSCards(STATE.cvs);
+  html += '</div></div>';
+  container.innerHTML = html;
+}
+
+function renderCVSCards(list) {
+  if (list.length === 0) return '<div class="empty-state"><div class="icon">&#x1F465;</div>Nessun CVS configurato</div>';
+  var h = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:16px;">';
+  for (var i = 0; i < list.length; i++) {
+    var t = list[i];
+    h += '<div class="card" style="margin-bottom:0;">';
+    h += '<div style="font-weight:700;font-size:1rem;margin-bottom:4px;">' + escHtml(getStrutturaNome(t.strutturaId)) + '</div>';
+    h += '<div style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:12px;">Delibera: ' + fmtDate(t.dataDelibera) + '</div>';
+    h += '<table style="width:100%;font-size:0.82rem;">';
+    if (t.riskManagerNome) h += '<tr><td style="color:var(--text-secondary);padding:3px 0;">Risk Manager</td><td style="font-weight:600;padding:3px 0;text-align:right;">' + escHtml(t.riskManagerNome) + '<br><span style="font-weight:400;font-size:0.75rem;">' + escHtml(t.riskManagerEmail) + '</span></td></tr>';
+    if (t.medicoLegaleNome) h += '<tr><td style="color:var(--text-secondary);padding:3px 0;">Medico Legale</td><td style="font-weight:600;padding:3px 0;text-align:right;">' + escHtml(t.medicoLegaleNome) + '<br><span style="font-weight:400;font-size:0.75rem;">' + escHtml(t.medicoLegaleEmail) + '</span></td></tr>';
+    if (t.lossAdjusterNome) h += '<tr><td style="color:var(--text-secondary);padding:3px 0;">Loss Adjuster</td><td style="font-weight:600;padding:3px 0;text-align:right;">' + escHtml(t.lossAdjusterNome) + '<br><span style="font-weight:400;font-size:0.75rem;">' + escHtml(t.lossAdjusterEmail) + '</span></td></tr>';
+    if (t.avvocatoNome) h += '<tr><td style="color:var(--text-secondary);padding:3px 0;">Avvocato</td><td style="font-weight:600;padding:3px 0;text-align:right;">' + escHtml(t.avvocatoNome) + '<br><span style="font-weight:400;font-size:0.75rem;">' + escHtml(t.avvocatoEmail) + '</span></td></tr>';
+    h += '</table>';
+    h += '<div style="margin-top:12px;text-align:right;"><button class="btn btn-sm btn-secondary" onclick="openCVSForm(' + i + ')">&#x270F;&#xFE0F; Modifica</button></div>';
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function filterCVS() {
+  var fs = document.getElementById('cvs-filtro-str').value;
+  var filtered = STATE.cvs.filter(function(t) { return !fs || t.strutturaId === fs; });
+  document.getElementById('cvs-container').innerHTML = renderCVSCards(filtered);
+}
+
+function openCVSForm(idx) {
+  var t = (idx !== undefined && STATE.cvs[idx]) ? STATE.cvs[idx] : null;
+  var html = '<form onsubmit="saveCVS(event)">';
+  html += '<div class="form-grid">';
+  html += '<div class="form-group"><label>Struttura *</label><select id="cvs-struttura" required><option value="">Seleziona...</option>' + struttureOptions(t ? t.strutturaId : '') + '</select></div>';
+  html += '<div class="form-group"><label>Data Delibera</label><input type="date" id="cvs-delibera" value="' + (t && t.dataDelibera ? String(t.dataDelibera).substring(0,10) : '') + '"></div>';
+  html += '</div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F9D1;&#x200D;&#x2695;&#xFE0F; Risk Manager</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome</label><input type="text" id="cvs-rm-nome" value="' + (t ? escHtml(t.riskManagerNome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="cvs-rm-email" value="' + (t ? escHtml(t.riskManagerEmail) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="cvs-rm-tel" value="' + (t ? escHtml(t.riskManagerTel) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F9D1;&#x200D;&#x2695;&#xFE0F; Medico Legale</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome</label><input type="text" id="cvs-ml-nome" value="' + (t ? escHtml(t.medicoLegaleNome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="cvs-ml-email" value="' + (t ? escHtml(t.medicoLegaleEmail) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="cvs-ml-tel" value="' + (t ? escHtml(t.medicoLegaleTel) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4BC; Loss Adjuster</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome</label><input type="text" id="cvs-la-nome" value="' + (t ? escHtml(t.lossAdjusterNome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="cvs-la-email" value="' + (t ? escHtml(t.lossAdjusterEmail) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="cvs-la-tel" value="' + (t ? escHtml(t.lossAdjusterTel) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x2696;&#xFE0F; Avvocato</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome</label><input type="text" id="cvs-av-nome" value="' + (t ? escHtml(t.avvocatoNome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="cvs-av-email" value="' + (t ? escHtml(t.avvocatoEmail) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="cvs-av-tel" value="' + (t ? escHtml(t.avvocatoTel) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button><button type="submit" class="btn btn-primary">Salva CVS</button></div>';
+  html += '</form>';
+  openModal(t ? 'Modifica CVS' : 'Assegna CVS', html, true);
+}
+
+function saveCVS(e) {
+  e.preventDefault();
+  var obj = {
+    strutturaId: document.getElementById('cvs-struttura').value,
+    dataDelibera: document.getElementById('cvs-delibera').value,
+    riskManagerNome: document.getElementById('cvs-rm-nome').value,
+    riskManagerEmail: document.getElementById('cvs-rm-email').value,
+    riskManagerTel: document.getElementById('cvs-rm-tel').value,
+    medicoLegaleNome: document.getElementById('cvs-ml-nome').value,
+    medicoLegaleEmail: document.getElementById('cvs-ml-email').value,
+    medicoLegaleTel: document.getElementById('cvs-ml-tel').value,
+    lossAdjusterNome: document.getElementById('cvs-la-nome').value,
+    lossAdjusterEmail: document.getElementById('cvs-la-email').value,
+    lossAdjusterTel: document.getElementById('cvs-la-tel').value,
+    avvocatoNome: document.getElementById('cvs-av-nome').value,
+    avvocatoEmail: document.getElementById('cvs-av-email').value,
+    avvocatoTel: document.getElementById('cvs-av-tel').value
+  };
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      closeModal();
+      showToast('CVS salvato');
+      loadCVS();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .salvaTeam(STATE.token, obj);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AGENDA
+// ═══════════════════════════════════════════════════════════════
+function loadAgenda() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      STATE.agenda = data;
+      google.script.run
+        .withSuccessHandler(function(str) { STATE.strutture = str; renderAgenda(); })
+        .getStrutture(STATE.token);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getAgenda(STATE.token, '');
+}
+
+function renderAgenda() {
+  var container = document.getElementById('main-content');
+  var html = '<div class="page-header"><h1>&#x1F4C5; Agenda</h1>';
+  html += '<div class="actions"><button class="btn btn-primary" onclick="openAgendaForm()">+ Nuovo Evento</button></div></div>';
+  html += '<div class="card">';
+  html += '<div class="search-bar">';
+  html += '<select id="age-filtro-str" onchange="filterAgenda()"><option value="">Tutte le strutture</option>' + struttureOptions() + '</select>';
+  html += '</div>';
+  html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Data</th><th>Ora</th><th>Tipo</th><th>ODG</th><th>Partecipanti</th><th>Struttura</th><th style="width:100px;">Azioni</th></tr></thead>';
+  html += '<tbody id="agenda-tbody">' + renderAgendaRows(STATE.agenda) + '</tbody></table></div>';
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+function renderAgendaRows(rows) {
+  if (rows.length === 0) return '<tr><td colspan="7" class="empty-state">Nessun evento programmato</td></tr>';
+  var h = '';
+  for (var i = 0; i < rows.length; i++) {
+    var a = rows[i];
+    h += '<tr>';
+    h += '<td>' + fmtDate(a.data) + '</td>';
+    h += '<td>' + escHtml(a.ora) + '</td>';
+    h += '<td><span class="badge badge-aperta">' + escHtml(a.tipo) + '</span></td>';
+    h += '<td>' + escHtml(a.odg) + '</td>';
+    h += '<td>' + escHtml(a.partecipanti) + '</td>';
+    h += '<td>' + escHtml(getStrutturaNome(a.strutturaId)) + '</td>';
+    h += '<td><button class="btn btn-sm btn-secondary" onclick="openAgendaForm(' + i + ')">&#x270F;&#xFE0F;</button> ';
+    h += '<button class="btn btn-sm btn-danger" onclick="deleteAgenda(\'' + escHtml(a.id) + '\')">&#x1F5D1;&#xFE0F;</button></td>';
+    h += '</tr>';
+  }
+  return h;
+}
+
+function filterAgenda() {
+  var fs = document.getElementById('age-filtro-str').value;
+  var filtered = STATE.agenda.filter(function(a) { return !fs || a.strutturaId === fs; });
+  document.getElementById('agenda-tbody').innerHTML = renderAgendaRows(filtered);
+}
+
+function openAgendaForm(idx) {
+  var a = (idx !== undefined && STATE.agenda[idx]) ? STATE.agenda[idx] : null;
+  var html = '<form onsubmit="saveAgenda(event)">';
+  html += '<input type="hidden" id="age-id" value="' + (a ? escHtml(a.id) : '') + '">';
+  html += '<div class="form-grid">';
+  html += '<div class="form-group"><label>Data *</label><input type="date" id="age-data" required value="' + (a && a.data ? String(a.data).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Ora</label><input type="time" id="age-ora" value="' + (a ? escHtml(a.ora) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tipo *</label><select id="age-tipo" required><option value="">Seleziona...</option><option value="riunione"' + (a && a.tipo==='riunione'?' selected':'') + '>Riunione</option><option value="udienza"' + (a && a.tipo==='udienza'?' selected':'') + '>Udienza</option><option value="perizia"' + (a && a.tipo==='perizia'?' selected':'') + '>Perizia</option><option value="collegiale"' + (a && a.tipo==='collegiale'?' selected':'') + '>Collegiale</option><option value="altro"' + (a && a.tipo==='altro'?' selected':'') + '>Altro</option></select></div>';
+  html += '<div class="form-group"><label>Struttura</label><select id="age-struttura"><option value="">Generale</option>' + struttureOptions(a ? a.strutturaId : '') + '</select></div>';
+  html += '<div class="form-group full"><label>Ordine del Giorno</label><textarea id="age-odg">' + (a ? escHtml(a.odg) : '') + '</textarea></div>';
+  html += '<div class="form-group full"><label>Partecipanti</label><textarea id="age-part">' + (a ? escHtml(a.partecipanti) : '') + '</textarea></div>';
+  html += '<div class="form-group full"><label>Note</label><textarea id="age-note">' + (a ? escHtml(a.note) : '') + '</textarea></div>';
+  html += '</div>';
+  html += '<div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button><button type="submit" class="btn btn-primary">Salva Evento</button></div>';
+  html += '</form>';
+  openModal(a ? 'Modifica Evento' : 'Nuovo Evento', html);
+}
+
+function saveAgenda(e) {
+  e.preventDefault();
+  var obj = {
+    id: document.getElementById('age-id').value,
+    data: document.getElementById('age-data').value,
+    ora: document.getElementById('age-ora').value,
+    tipo: document.getElementById('age-tipo').value,
+    strutturaId: document.getElementById('age-struttura').value,
+    odg: document.getElementById('age-odg').value,
+    partecipanti: document.getElementById('age-part').value,
+    note: document.getElementById('age-note').value
+  };
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      closeModal();
+      showToast('Evento salvato');
+      loadAgenda();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .salvaAgenda(STATE.token, obj);
+}
+
+function deleteAgenda(id) {
+  if (!confirm('Eliminare questo evento?')) return;
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      showToast('Evento eliminato');
+      loadAgenda();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .eliminaAgenda(STATE.token, id);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  UTENTI (ADMIN)
+// ═══════════════════════════════════════════════════════════════
+function loadUtenti() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      STATE.utenti = data;
+      renderUtenti();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getUtenti(STATE.token);
+}
+
+function renderUtenti() {
+  var container = document.getElementById('main-content');
+  var html = '<div class="page-header"><h1>&#x1F464; Gestione Utenti</h1>';
+  html += '<div class="actions"><button class="btn btn-primary" onclick="openUtenteForm()">+ Nuovo Utente</button></div></div>';
+
+  html += '<div class="card"><div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
+  html += '<th>Username</th><th>Ruolo</th><th>Struttura</th><th>Attivo</th><th>Ultimo Accesso</th><th style="width:80px;">Azioni</th>';
+  html += '</tr></thead><tbody>';
+  for (var i = 0; i < STATE.utenti.length; i++) {
+    var u = STATE.utenti[i];
+    html += '<tr>';
+    html += '<td><strong>' + escHtml(u.username) + '</strong></td>';
+    html += '<td><span class="badge ' + (u.ruolo==='admin'?'badge-danger':'badge-incorso') + '">' + escHtml(u.ruolo) + '</span></td>';
+    html += '<td>' + escHtml(u.strutturaNome || u.strutturaId || '-') + '</td>';
+    html += '<td>' + (u.attivo ? '&#x2705;' : '&#x274C;') + '</td>';
+    html += '<td>' + fmtDate(u.ultimoAccesso) + '</td>';
+    html += '<td><button class="btn btn-sm btn-secondary" onclick="openUtenteForm(' + i + ')">&#x270F;&#xFE0F;</button></td>';
+    html += '</tr>';
+  }
+  if (STATE.utenti.length === 0) html += '<tr><td colspan="6" class="empty-state">Nessun utente</td></tr>';
+  html += '</tbody></table></div></div>';
+
+  container.innerHTML = html;
+}
+
+function openUtenteForm(idx) {
+  var u = (idx !== undefined && STATE.utenti[idx]) ? STATE.utenti[idx] : null;
+  var html = '<form onsubmit="saveUtente(event)">';
+  html += '<div class="form-grid">';
+  html += '<div class="form-group"><label>Username *</label><input type="text" id="ut-user" required value="' + (u ? escHtml(u.username) : '') + '"' + (u?' disabled':'') + '></div>';
+  html += '<div class="form-group"><label>Password ' + (u ? '(lasciare vuota per non cambiare)' : '*') + '</label><input type="password" id="ut-pw" ' + (u ? '' : 'required') + '></div>';
+  html += '<div class="form-group"><label>Ruolo *</label><select id="ut-ruolo" required><option value="">Seleziona...</option><option value="admin"' + (u && u.ruolo==='admin'?' selected':'') + '>Admin</option><option value="manager"' + (u && u.ruolo==='manager'?' selected':'') + '>Manager</option><option value="viewer"' + (u && u.ruolo==='viewer'?' selected':'') + '>Viewer</option></select></div>';
+  html += '<div class="form-group"><label>Struttura Assegnata</label><select id="ut-str"><option value="">Nessuna</option><option value="tutti"' + (u && u.strutturaId==='tutti'?' selected':'') + '>Tutte</option>' + struttureOptions(u ? u.strutturaId : '') + '</select></div>';
+  html += '<div class="form-group"><label>Attivo</label><select id="ut-attivo"><option value="true"' + (!u || u.attivo ? ' selected':'') + '>S&igrave;</option><option value="false"' + (u && !u.attivo ? ' selected':'') + '>No</option></select></div>';
+  html += '</div>';
+  html += '<div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button><button type="submit" class="btn btn-primary">Salva Utente</button></div>';
+  html += '</form>';
+  openModal(u ? 'Modifica Utente' : 'Nuovo Utente', html);
+}
+
+function saveUtente(e) {
+  e.preventDefault();
+  var obj = {
+    username: document.getElementById('ut-user').value,
+    password: document.getElementById('ut-pw').value,
+    ruolo: document.getElementById('ut-ruolo').value,
+    strutturaId: document.getElementById('ut-str').value,
+    attivo: document.getElementById('ut-attivo').value === 'true'
+  };
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      closeModal();
+      showToast('Utente salvato');
+      loadUtenti();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .salvaUtente(STATE.token, obj);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  AUDIT LOG (ADMIN)
+// ═══════════════════════════════════════════════════════════════
+function loadAudit() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      STATE.audit = data;
+      renderAudit();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getAuditLog(STATE.token, 500);
+}
+
+function renderAudit() {
+  var container = document.getElementById('main-content');
+  var html = '<div class="page-header"><h1>&#x1F4DD; Audit Log</h1>';
+  html += '<div class="actions"><button class="btn btn-secondary btn-sm" onclick="loadAudit()">&#x1F504; Aggiorna</button></div></div>';
+
+  html += '<div class="card"><div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
+  html += '<th>Timestamp</th><th>Azione</th><th>Utente</th><th>Struttura</th><th>Protocollo</th><th>Dettaglio</th>';
+  html += '</tr></thead><tbody>';
+  
+  if (STATE.audit && Array.isArray(STATE.audit) && STATE.audit.length > 0) {
+    for (var i = 0; i < STATE.audit.length; i++) {
+      var a = STATE.audit[i];
+      html += '<tr>';
+      html += '<td>' + fmtDate(a.timestamp) + '</td>';
+      html += '<td><span class="badge badge-incorso">' + escHtml(a.azione) + '</span></td>';
+      html += '<td>' + escHtml(a.utente) + '</td>';
+      html += '<td>' + escHtml(a.strutturaId) + '</td>';
+      html += '<td>' + escHtml(a.protocollo) + '</td>';
+      html += '<td>' + escHtml(a.dettaglio) + '</td>';
+      html += '</tr>';
+    }
+  } else {
+    html += '<tr><td colspan="6" class="empty-state">Nessun record</td></tr>';
+  }
+  
+  html += '</tbody></table></div></div>';
+
+  container.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  PANNELLO STRUTTURA
+// ═══════════════════════════════════════════════════════════════
+var PS_STATE = {
+  strutturaId: null,
+  struttura: null,
+  pratiche: [],
+  cvs: null,
+  agenda: [],
+  activeTab: 'dati'
+};
+
+function openPannelloStrutturaId(id) {
+  PS_STATE.strutturaId = id;
+  PS_STATE.activeTab = 'dati';
+  navigate('pannello');
+}
+
+function loadPannelloStruttura() {
+  if (PS_STATE.strutturaId) {
+    _psCaricaStruttura(PS_STATE.strutturaId);
+    return;
+  }
+  if (STATE.user.strutturaId && STATE.user.strutturaId !== 'tutti') {
+    PS_STATE.strutturaId = STATE.user.strutturaId;
+    PS_STATE.activeTab = 'dati';
+    _psCaricaStruttura(PS_STATE.strutturaId);
+    return;
+  }
+  _psMostraSelettore();
+}
+
+function _psMostraSelettore() {
+  var container = document.getElementById('main-content');
+  google.script.run
+    .withSuccessHandler(function(strutture) {
+      STATE.strutture = strutture;
+      var html = '<div class="ps-selettore">';
+      html += '<h1>&#x1F3E2; Pannello Struttura</h1>';
+      html += '<p style="color:var(--text-secondary);margin-bottom:24px;">Seleziona una struttura per gestire dati, sinistri, professionisti e calendario.</p>';
+      html += '<div class="ps-str-grid">';
+      for (var i = 0; i < strutture.length; i++) {
+        var s = strutture[i];
+        var icon = s.tipo === 'ospedale' ? '&#x1F3E5;' : (s.tipo === 'casa di cura' ? '&#x1FA7A;' : '&#x1F3E2;');
+        html += '<div class="ps-str-card" onclick="openPannelloStrutturaId(\'' + escHtml(s.id) + '\')">';
+        html += '<div class="str-icon">' + icon + '</div>';
+        html += '<div class="str-nome">' + escHtml(s.nome) + '</div>';
+        html += '<div class="str-meta">' + escHtml(s.tipo) + ' &middot; ' + escHtml(s.citta) + ' (' + escHtml(s.provincia) + ')</div>';
+        html += '</div>';
+      }
+      html += '</div></div>';
+      container.innerHTML = html;
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getStrutture(STATE.token);
+}
+
+function _psCaricaStruttura(id) {
+  var container = document.getElementById('main-content');
+  container.innerHTML = '<div class="empty-state"><span class="spinner"></span><br>Caricamento pannello...</div>';
+
+  google.script.run
+    .withSuccessHandler(function(s) {
+      if (!s) { showToast('Struttura non trovata', 'error'); _psMostraSelettore(); return; }
+      PS_STATE.struttura = s;
+      renderPannelloStruttura();
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .getStruttura(STATE.token, id);
+}
+
+function renderPannelloStruttura() {
+  var s = PS_STATE.struttura;
+  var container = document.getElementById('main-content');
+  var isAdmin = STATE.user.ruolo === 'admin';
+
+  var html = '';
+
+  // Header struttura
+  html += '<div class="ps-header">';
+  html += '<div>';
+  html += '<h2>' + escHtml(s.nome) + '</h2>';
+  html += '<div class="ps-meta">' + escHtml(s.tipo) + ' &middot; ' + escHtml(s.via) + ', ' + escHtml(s.citta) + ' (' + escHtml(s.provincia) + ') &middot; Tel: ' + escHtml(s.telefono) + '</div>';
+  html += '</div>';
+  html += '<div style="display:flex;gap:10px;">';
+  if (isAdmin) html += '<button class="btn" onclick="openStrutturaForm(\'' + escHtml(s.id) + '\')">&#x270F;&#xFE0F; Modifica Dati</button>';
+  html += '<button class="btn" onclick="PS_STATE.strutturaId=null;loadPannelloStruttura();">&#x1F504; Cambia Struttura</button>';
+  html += '</div>';
+  html += '</div>';
+
+  // Tab bar
+  html += '<div class="ps-tabs">';
+  html += '<button class="ps-tab ' + (PS_STATE.activeTab==='dati'?'active':'') + '" onclick="psSwitchTab(\'dati\')">&#x1F4C4; Dati Struttura</button>';
+  html += '<button class="ps-tab ' + (PS_STATE.activeTab==='pratiche'?'active':'') + '" onclick="psSwitchTab(\'pratiche\')">&#x1F4CB; Sinistri <span id="ps-badge-sin" class="badge badge-incorso" style="margin-left:6px;display:none;">0</span></button>';
+  html += '<button class="ps-tab ' + (PS_STATE.activeTab==='cvs'?'active':'') + '" onclick="psSwitchTab(\'cvs\')">&#x1F465; Professionisti</button>';
+  html += '<button class="ps-tab ' + (PS_STATE.activeTab==='agenda'?'active':'') + '" onclick="psSwitchTab(\'agenda\')">&#x1F4C5; Calendario <span id="ps-badge-age" class="badge badge-aperta" style="margin-left:6px;display:none;">0</span></button>';
+  html += '</div>';
+
+  // Pannelli
+  html += '<div id="ps-panel-dati" class="ps-panel ' + (PS_STATE.activeTab==='dati'?'active':'') + '"></div>';
+  html += '<div id="ps-panel-pratiche" class="ps-panel ' + (PS_STATE.activeTab==='pratiche'?'active':'') + '"></div>';
+  html += '<div id="ps-panel-cvs" class="ps-panel ' + (PS_STATE.activeTab==='cvs'?'active':'') + '"></div>';
+  html += '<div id="ps-panel-agenda" class="ps-panel ' + (PS_STATE.activeTab==='agenda'?'active':'') + '"></div>';
+
+  container.innerHTML = html;
+
+  // Render tab attivo
+  if (PS_STATE.activeTab === 'dati') renderPSTabDati(s);
+  else if (PS_STATE.activeTab === 'pratiche') renderPSTabPratiche(s.id);
+  else if (PS_STATE.activeTab === 'cvs') renderPSTabCVS(s.id);
+  else if (PS_STATE.activeTab === 'agenda') renderPSTabAgenda(s.id);
+}
+
+function psSwitchTab(tab) {
+  PS_STATE.activeTab = tab;
+  document.querySelectorAll('.ps-tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.ps-panel').forEach(function(p){ p.classList.remove('active'); });
+  var tabEl = document.querySelector('.ps-tab:nth-child(' + (tab==='dati'?1:tab==='pratiche'?2:tab==='cvs'?3:4) + ')');
+  if (tabEl) tabEl.classList.add('active');
+  document.getElementById('ps-panel-' + (tab==='pratiche'?'pratiche':tab==='cvs'?'cvs':tab==='agenda'?'agenda':'dati')).classList.add('active');
+
+  if (tab === 'dati') renderPSTabDati(PS_STATE.struttura);
+  else if (tab === 'pratiche') renderPSTabPratiche(PS_STATE.struttura.id);
+  else if (tab === 'cvs') renderPSTabCVS(PS_STATE.struttura.id);
+  else if (tab === 'agenda') renderPSTabAgenda(PS_STATE.struttura.id);
+}
+
+// ── TAB DATI STRUTTURA ──
+function renderPSTabDati(s) {
+  var panel = document.getElementById('ps-panel-dati');
+  var isAdmin = STATE.user.ruolo === 'admin';
+  var html = '<div class="card">';
+  if (s) {
+    html += '<div class="detail-grid">';
+    html += '<div class="detail-item"><div class="label">ID Struttura</div><div class="value">' + escHtml(s.id) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Nome</div><div class="value">' + escHtml(s.nome) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Tipo</div><div class="value">' + escHtml(s.tipo) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Via</div><div class="value">' + escHtml(s.via) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Citt&agrave;</div><div class="value">' + escHtml(s.citta) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Provincia</div><div class="value">' + escHtml(s.provincia) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">CAP</div><div class="value">' + escHtml(s.cap) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Telefono</div><div class="value">' + escHtml(s.telefono) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Email</div><div class="value">' + escHtml(s.email) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Direttore Sanitario</div><div class="value">' + escHtml(s.direttore) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Email Accesso</div><div class="value">' + escHtml(s.emailAccesso) + '</div></div>';
+    html += '<div class="detail-item"><div class="label">Password Accesso</div><div class="value">' + (s.passwordAccesso ? '&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;&#x2022;' : '-') + '</div></div>';
+    html += '</div>';
+  } else {
+    html += '<div class="empty-state"><div class="icon">&#x1F3E5;</div>Nessuna struttura selezionata.</div>';
+  }
+
+  if (isAdmin) {
+    html += '<div style="margin-top:20px;display:flex;gap:10px;justify-content:center;">';
+    if (s) {
+      html += '<button class="btn btn-primary" onclick="openStrutturaForm(\'' + escHtml(s.id) + '\')">&#x270F;&#xFE0F; Modifica Dati Struttura</button>';
+    }
+    html += '<button class="btn btn-success" onclick="openStrutturaForm()">+ Nuova Struttura</button>';
+    html += '</div>';
+  }
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+// ── TAB SINISTRI ──
+function renderPSTabPratiche(strutturaId) {
+  var panel = document.getElementById('ps-panel-pratiche');
+  panel.innerHTML = '<div class="empty-state"><span class="spinner"></span><br>Caricamento sinistri...</div>';
+
+  google.script.run
+    .withSuccessHandler(function(pratiche) {
+      if (!pratiche || !Array.isArray(pratiche)) {
+        pratiche = [];
+      }
+      PS_STATE.pratiche = pratiche;
+      var badge = document.getElementById('ps-badge-sin');
+      if (badge) { badge.textContent = pratiche.length; badge.style.display = pratiche.length ? 'inline-block' : 'none'; }
+
+      var html = '<div class="card">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">';
+      html += '<div class="card-title" style="margin-bottom:0;">&#x1F4CB; Sinistri della Struttura</div>';
+      html += '<button class="btn btn-primary" onclick="openPSSinistroForm()">+ Nuovo Sinistro</button>';
+      html += '</div>';
+      html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
+      html += '<th>Protocollo</th><th>Data Evento</th><th>Paziente</th><th>Reparto</th><th>Tipo</th><th>Gravit&agrave;</th><th>Esito</th><th style="width:100px;">Azioni</th>';
+      html += '</tr></thead><tbody>';
+      html += renderPSSinistriRows(pratiche);
+      html += '</tbody></table></div></div>';
+      panel.innerHTML = html;
+    })
+    .withFailureHandler(function(e) { 
+      console.error("Errore nel caricamento sinistri:", e);
+      panel.innerHTML = '<div class="empty-state">Errore nel caricamento dei dati. Controlla la console.</div>'; 
+    })
+    .getPratiche(STATE.token, strutturaId);
+}
+
+function renderPSSinistriRows(pratiche) {
+  if (!pratiche || pratiche.length === 0) {
+    return '<tr><td colspan="8" class="empty-state">Nessun sinistro per questa struttura. Clicca "Nuovo Sinistro" per aggiungerne uno.</td></tr>';
+  }
+  var h = '';
+  for (var i = 0; i < pratiche.length; i++) {
+    var p = pratiche[i];
+    if (!p) continue; 
+    var gravClass = p.gravita === 'grave' || p.gravita === 'gravissima' ? 'badge-grave' : (p.gravita === 'lieve' ? 'badge-lieve' : 'badge-aperta');
+    var esitoClass = p.esito === 'chiusa' ? 'badge-chiusa' : (p.esito === 'in_corso' ? 'badge-incorso' : 'badge-aperta');
+    var dotClass = p.esito === 'chiusa' ? 'chiusa' : (p.esito === 'in_corso' ? 'incorso' : 'aperta');
+    h += '<tr>';
+    h += '<td><strong>' + escHtml(p.numero_protocollo) + '</strong></td>';
+    h += '<td>' + fmtDate(p.data_evento) + '</td>';
+    h += '<td>' + escHtml(p.cognome_paziente) + ' ' + escHtml(p.nome_paziente) + '</td>';
+    h += '<td>' + escHtml(p.reparto) + '</td>';
+    h += '<td>' + escHtml(p.tipo_evento) + '</td>';
+    h += '<td><span class="badge ' + gravClass + '">' + escHtml(p.gravita) + '</span></td>';
+    h += '<td><span class="status-dot ' + dotClass + '"></span><span class="badge ' + esitoClass + '">' + escHtml(p.esito) + '</span></td>';
+    h += '<td><button class="btn btn-sm btn-secondary" onclick="openPSSinistroForm(' + i + ')">&#x270F;&#xFE0F;</button> ';
+    h += '<button class="btn btn-sm btn-danger" onclick="deletePSSinistro(' + i + ')">&#x1F5D1;&#xFE0F;</button></td>';
+    h += '</tr>';
+  }
+  return h;
+}
+
+function openPSSinistroForm(idx) {
+  var p = (idx !== undefined && PS_STATE.pratiche[idx]) ? PS_STATE.pratiche[idx] : null;
+  var s = PS_STATE.struttura;
+  var html = '<form onsubmit="savePSSinistro(event)">';
+  html += '<input type="hidden" id="pspra-rowidx" value="' + (p ? (idx+2) : '') + '">';
+  html += '<input type="hidden" id="pspra-struttura" value="' + escHtml(s.id) + '">';
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4C4; Dati Generali</div><div class="form-grid">';
+  html += '<div class="form-group"><label>N. Protocollo *</label><input type="text" id="pspra-protocollo" required value="' + (p ? escHtml(p.numero_protocollo) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Apertura</label><input type="date" id="pspra-data-apertura" value="' + (p && p.data_apertura ? String(p.data_apertura).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Evento *</label><input type="date" id="pspra-data-evento" required value="' + (p && p.data_evento ? String(p.data_evento).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Reparto</label><input type="text" id="pspra-reparto" value="' + (p ? escHtml(p.reparto) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tipo Evento</label><select id="pspra-tipo"><option value="">Seleziona...</option><option value="danno"' + (p && p.tipo_evento==='danno'?' selected':'') + '>Danno</option><option value="morte"' + (p && p.tipo_evento==='morte'?' selected':'') + '>Morte</option><option value="infezione"' + (p && p.tipo_evento==='infezione'?' selected':'') + '>Infezione</option><option value="caduta"' + (p && p.tipo_evento==='caduta'?' selected':'') + '>Caduta</option><option value="errore terapeutico"' + (p && p.tipo_evento==='errore terapeutico'?' selected':'') + '>Errore Terapeutico</option><option value="altro"' + (p && p.tipo_evento==='altro'?' selected':'') + '>Altro</option></select></div>';
+  html += '<div class="form-group"><label>Gravit&agrave;</label><select id="pspra-gravita"><option value="">Seleziona...</option><option value="lieve"' + (p && p.gravita==='lieve'?' selected':'') + '>Lieve</option><option value="moderata"' + (p && p.gravita==='moderata'?' selected':'') + '>Moderata</option><option value="grave"' + (p && p.gravita==='grave'?' selected':'') + '>Grave</option><option value="gravissima"' + (p && p.gravita==='gravissima'?' selected':'') + '>Gravissima</option></select></div>';
+  html += '<div class="form-group"><label>Esito</label><select id="pspra-esito"><option value="in_corso"' + (p && p.esito==='in_corso'?' selected':'') + '>In Corso</option><option value="chiusa"' + (p && p.esito==='chiusa'?' selected':'') + '>Chiusa</option><option value="archiviata"' + (p && p.esito==='archiviata'?' selected':'') + '>Archiviata</option></select></div>';
+  html += '<div class="form-group"><label>Medico</label><input type="text" id="pspra-medico" value="' + (p ? escHtml(p.medico) : '') + '"></div>';
+  html += '<div class="form-group full"><label>Descrizione Evento</label><textarea id="pspra-descrizione">' + (p ? escHtml(p.descrizione) : '') + '</textarea></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F476; Paziente</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome Paziente</label><input type="text" id="pspra-pnome" value="' + (p ? escHtml(p.nome_paziente) : '') + '"></div>';
+  html += '<div class="form-group"><label>Cognome Paziente</label><input type="text" id="pspra-pcognome" value="' + (p ? escHtml(p.cognome_paziente) : '') + '"></div>';
+  html += '<div class="form-group"><label>Codice Fiscale</label><input type="text" id="pspra-pcf" maxlength="16" value="' + (p ? escHtml(p.cf_paziente) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x2696;&#xFE0F; Dati Legali</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Legale</label><input type="text" id="pspra-legale" value="' + (p ? escHtml(p.legale) : '') + '"></div>';
+  html += '<div class="form-group"><label>Studio Legale</label><input type="text" id="pspra-studio" value="' + (p ? escHtml(p.studio) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email Legale</label><input type="email" id="pspra-email-legale" value="' + (p ? escHtml(p.emailLegale) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tel. Legale</label><input type="text" id="pspra-tel-legale" value="' + (p ? escHtml(p.telefonoLegale) : '') + '"></div>';
+  html += '<div class="form-group"><label>Polizza Assicurativa</label><input type="text" id="pspra-polizza" value="' + (p ? escHtml(p.polizzaAssicurativa) : '') + '"></div>';
+  html += '<div class="form-group"><label>Impresa Assicuratrice</label><input type="text" id="pspra-impresa" value="' + (p ? escHtml(p.impresaAssicuratrice) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tribunale</label><input type="text" id="pspra-tribunale" value="' + (p ? escHtml(p.tribunale) : '') + '"></div>';
+  html += '<div class="form-group"><label>N. Ruolo</label><input type="text" id="pspra-ruolo" value="' + (p ? escHtml(p.numeroRuolo) : '') + '"></div>';
+  html += '<div class="form-group"><label>Proposta Conciliativa</label><input type="text" id="pspra-conciliativa" value="' + (p ? escHtml(p.propostaConciliativa) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Proposta</label><input type="date" id="pspra-data-proposta" value="' + (p && p.dataProposta ? String(p.dataProposta).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Valore Offerta (&euro;)</label><input type="number" step="0.01" id="pspra-offerta" value="' + (p ? escHtml(p.valoreOfferta) : '') + '"></div>';
+  html += '<div class="form-group"><label>Importo Liquidato (&euro;)</label><input type="number" step="0.01" id="pspra-liquidato" value="' + (p ? escHtml(p.importoLiquidato) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Liquidazione</label><input type="date" id="pspra-data-liq" value="' + (p && p.dataLiquidazione ? String(p.dataLiquidazione).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Esito Legale</label><input type="text" id="pspra-esito-legale" value="' + (p ? escHtml(p.esitoLegale) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Chiusura</label><input type="date" id="pspra-data-chiusura" value="' + (p && p.dataChiusura ? String(p.dataChiusura).substring(0,10) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4C8; Dati Economici</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Ammontare (&euro;)</label><input type="number" step="0.01" id="pspra-ammontare" value="' + (p ? escHtml(p.ammontare) : '') + '"></div>';
+  html += '<div class="form-group"><label>Invalidit&agrave;</label><input type="text" id="pspra-invalidita" value="' + (p ? escHtml(p.invalidita) : '') + '"></div>';
+  html += '<div class="form-group"><label>Riserva (&euro;)</label><input type="number" step="0.01" id="pspra-riserva" value="' + (p ? escHtml(p.riserva) : '') + '"></div>';
+  html += '<div class="form-group"><label>Data Delibera</label><input type="date" id="pspra-data-delibera" value="' + (p && p.dataDelibera ? String(p.dataDelibera).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>SIR</label><input type="text" id="pspra-sir" value="' + (p ? escHtml(p.sir) : '') + '"></div>';
+  html += '<div class="form-group"><label>Quota SIR (&euro;)</label><input type="number" step="0.01" id="pspra-quota-sir" value="' + (p ? escHtml(p.quotaSir) : '') + '"></div>';
+  html += '<div class="form-group"><label>Franchigia</label><input type="text" id="pspra-franchigia" value="' + (p ? escHtml(p.franchigia) : '') + '"></div>';
+  html += '<div class="form-group"><label>Quota Franchigia (&euro;)</label><input type="number" step="0.01" id="pspra-quota-fran" value="' + (p ? escHtml(p.quotaFranchigia) : '') + '"></div>';
+  html += '<div class="form-group"><label>Valutato</label><input type="text" id="pspra-valutato" value="' + (p ? escHtml(p.valutato) : '') + '"></div>';
+  html += '<div class="form-group"><label>CTU Invalidit&agrave;</label><input type="text" id="pspra-ctu-inv" value="' + (p ? escHtml(p.ctuInvalidita) : '') + '"></div>';
+  html += '<div class="form-group"><label>CTU Inabilit&agrave;</label><input type="text" id="pspra-ctu-ina" value="' + (p ? escHtml(p.ctuInabilita) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4DD; Note</div>';
+  html += '<div class="form-group full"><textarea id="pspra-note" rows="3">' + (p ? escHtml(p.note) : '') + '</textarea></div>';
+  html += '</div>';
+
+  html += '<div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button><button type="submit" class="btn btn-primary">Salva Sinistro</button></div>';
+  html += '</form>';
+  openModal(p ? 'Modifica Sinistro' : 'Nuovo Sinistro', html, true);
+}
+
+function savePSSinistro(e) {
+  e.preventDefault();
+  var rowIdx = document.getElementById('pspra-rowidx').value;
+  var orig = null;
+  if (rowIdx) {
+    var arrIdx = parseInt(rowIdx) - 2;
+    if (PS_STATE.pratiche[arrIdx]) orig = PS_STATE.pratiche[arrIdx];
+  }
+  var obj = {
+    _rowIndex: rowIdx || '',
+    strutturaId: document.getElementById('pspra-struttura').value,
+    numero_protocollo: document.getElementById('pspra-protocollo').value,
+    data_apertura: document.getElementById('pspra-data-apertura').value,
+    data_evento: document.getElementById('pspra-data-evento').value,
+    reparto: document.getElementById('pspra-reparto').value,
+    descrizione: document.getElementById('pspra-descrizione').value,
+    nome_paziente: document.getElementById('pspra-pnome').value,
+    cognome_paziente: document.getElementById('pspra-pcognome').value,
+    cf_paziente: document.getElementById('pspra-pcf').value,
+    tipo_evento: document.getElementById('pspra-tipo').value,
+    gravita: document.getElementById('pspra-gravita').value,
+    esito: document.getElementById('pspra-esito').value,
+    medico: document.getElementById('pspra-medico').value,
+    dataRichiesta: orig ? orig.dataRichiesta : '',
+    tipoRichiesta: orig ? orig.tipoRichiesta : '',
+    ammontare: document.getElementById('pspra-ammontare').value,
+    invalidita: document.getElementById('pspra-invalidita').value,
+    riserva: document.getElementById('pspra-riserva').value,
+    dataDelibera: document.getElementById('pspra-data-delibera').value,
+    legale: document.getElementById('pspra-legale').value,
+    studio: document.getElementById('pspra-studio').value,
+    emailLegale: document.getElementById('pspra-email-legale').value,
+    telefonoLegale: document.getElementById('pspra-tel-legale').value,
+    polizzaAssicurativa: document.getElementById('pspra-polizza').value,
+    impresaAssicuratrice: document.getElementById('pspra-impresa').value,
+    sir: document.getElementById('pspra-sir').value,
+    quotaSir: document.getElementById('pspra-quota-sir').value,
+    franchigia: document.getElementById('pspra-franchigia').value,
+    quotaFranchigia: document.getElementById('pspra-quota-fran').value,
+    valutato: document.getElementById('pspra-valutato').value,
+    tribunale: document.getElementById('pspra-tribunale').value,
+    numeroRuolo: document.getElementById('pspra-ruolo').value,
+    ctuInvalidita: document.getElementById('pspra-ctu-inv').value,
+    ctuInabilita: document.getElementById('pspra-ctu-ina').value,
+    propostaConciliativa: document.getElementById('pspra-conciliativa').value,
+    dataProposta: document.getElementById('pspra-data-proposta').value,
+    valoreOfferta: document.getElementById('pspra-offerta').value,
+    importoLiquidato: document.getElementById('pspra-liquidato').value,
+    dataLiquidazione: document.getElementById('pspra-data-liq').value,
+    esitoLegale: document.getElementById('pspra-esito-legale').value,
+    dataChiusura: document.getElementById('pspra-data-chiusura').value,
+    note: document.getElementById('pspra-note').value
+  };
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      closeModal();
+      showToast('Sinistro salvato');
+      renderPSTabPratiche(PS_STATE.struttura.id);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .salvaPratica(STATE.token, obj);
+}
+
+function deletePSSinistro(arrIdx) {
+  var p = PS_STATE.pratiche[arrIdx];
+  if (!p) return;
+  if (!confirm('Eliminare il sinistro ' + p.numero_protocollo + '?')) return;
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      showToast('Sinistro eliminato');
+      renderPSTabPratiche(PS_STATE.struttura.id);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .eliminaPratica(STATE.token, arrIdx + 2);
+}
+
+// ── TAB PROFESSIONISTI ──
+function renderPSTabCVS(strutturaId) {
+  var panel = document.getElementById('ps-panel-cvs');
+  panel.innerHTML = '<div class="empty-state"><span class="spinner"></span><br>Caricamento CVS...</div>';
+
+  google.script.run
+    .withSuccessHandler(function(teams) {
+      var t = teams.length > 0 ? teams[0] : null;
+      PS_STATE.cvs = t;
+
+      var html = '<div class="card">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">';
+      html += '<div class="card-title" style="margin-bottom:0;">&#x1F465; CVS Professionisti</div>';
+      html += '<button class="btn btn-primary" onclick="openPSTeamForm()">' + (t ? '&#x270F;&#xFE0F; Modifica CVS' : '+ Assegna CVS') + '</button>';
+      html += '</div>';
+
+      if (!t) {
+        html += '<div class="empty-state"><div class="icon">&#x1F465;</div>Nessun CVS assegnato a questa struttura.<br>Clicca il pulsante per configurare i professionisti.</div>';
+      } else {
+        html += '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">';
+
+        html += '<div style="background:#f8f9fa;border-radius:8px;padding:16px;">';
+        html += '<div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.85rem;text-transform:uppercase;">&#x1F9D1;&#x200D;&#x2695;&#xFE0F; Risk Manager</div>';
+        html += '<div style="font-weight:600;">' + escHtml(t.riskManagerNome) + '</div>';
+        html += '<div style="font-size:0.82rem;color:var(--text-secondary);">' + escHtml(t.riskManagerEmail) + '</div>';
+        html += '<div style="font-size:0.82rem;color:var(--text-secondary);">' + escHtml(t.riskManagerTel) + '</div>';
+        html += '</div>';
+
+        html += '<div style="background:#f8f9fa;border-radius:8px;padding:16px;">';
+        html += '<div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.85rem;text-transform:uppercase;">&#x1F9D1;&#x200D;&#x2695;&#xFE0F; Medico Legale</div>';
+        html += '<div style="font-weight:600;">' + escHtml(t.medicoLegaleNome) + '</div>';
+        html += '<div style="font-size:0.82rem;color:var(--text-secondary);">' + escHtml(t.medicoLegaleEmail) + '</div>';
+        html += '<div style="font-size:0.82rem;color:var(--text-secondary);">' + escHtml(t.medicoLegaleTel) + '</div>';
+        html += '</div>';
+
+        html += '<div style="background:#f8f9fa;border-radius:8px;padding:16px;">';
+        html += '<div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.85rem;text-transform:uppercase;">&#x1F4BC; Loss Adjuster</div>';
+        html += '<div style="font-weight:600;">' + escHtml(t.lossAdjusterNome) + '</div>';
+        html += '<div style="font-size:0.82rem;color:var(--text-secondary);">' + escHtml(t.lossAdjusterEmail) + '</div>';
+        html += '<div style="font-size:0.82rem;color:var(--text-secondary);">' + escHtml(t.lossAdjusterTel) + '</div>';
+        html += '</div>';
+
+        html += '<div style="background:#f8f9fa;border-radius:8px;padding:16px;">';
+        html += '<div style="font-weight:700;color:var(--primary);margin-bottom:10px;font-size:0.85rem;text-transform:uppercase;">&#x2696;&#xFE0F; Avvocato</div>';
+        html += '<div style="font-weight:600;">' + escHtml(t.avvocatoNome) + '</div>';
+        html += '<div style="font-size:0.82rem;color:var(--text-secondary);">' + escHtml(t.avvocatoEmail) + '</div>';
+        html += '<div style="font-size:0.82rem;color:var(--text-secondary);">' + escHtml(t.avvocatoTel) + '</div>';
+        html += '</div>';
+
+        html += '</div>';
+      }
+      html += '</div>';
+      panel.innerHTML = html;
+    })
+    .withFailureHandler(function(e) { panel.innerHTML = '<div class="empty-state">Errore: ' + escHtml(e.message) + '</div>'; })
+    .getTeam(STATE.token, strutturaId);
+}
+
+function openPSTeamForm() {
+  var t = PS_STATE.cvs;
+  var html = '<form onsubmit="savePSTeam(event)">';
+  html += '<input type="hidden" id="psteam-struttura" value="' + escHtml(PS_STATE.struttura.id) + '">';
+  html += '<div class="form-group"><label>Data Delibera</label><input type="date" id="psteam-delibera" value="' + (t && t.dataDelibera ? String(t.dataDelibera).substring(0,10) : '') + '"></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F9D1;&#x200D;&#x2695;&#xFE0F; Risk Manager</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome</label><input type="text" id="psteam-rm-nome" value="' + (t ? escHtml(t.riskManagerNome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="psteam-rm-email" value="' + (t ? escHtml(t.riskManagerEmail) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="psteam-rm-tel" value="' + (t ? escHtml(t.riskManagerTel) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F9D1;&#x200D;&#x2695;&#xFE0F; Medico Legale</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome</label><input type="text" id="psteam-ml-nome" value="' + (t ? escHtml(t.medicoLegaleNome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="psteam-ml-email" value="' + (t ? escHtml(t.medicoLegaleEmail) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="psteam-ml-tel" value="' + (t ? escHtml(t.medicoLegaleTel) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x1F4BC; Loss Adjuster</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome</label><input type="text" id="psteam-la-nome" value="' + (t ? escHtml(t.lossAdjusterNome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="psteam-la-email" value="' + (t ? escHtml(t.lossAdjusterEmail) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="psteam-la-tel" value="' + (t ? escHtml(t.lossAdjusterTel) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div class="form-section"><div class="form-section-title">&#x2696;&#xFE0F; Avvocato</div><div class="form-grid">';
+  html += '<div class="form-group"><label>Nome</label><input type="text" id="psteam-av-nome" value="' + (t ? escHtml(t.avvocatoNome) : '') + '"></div>';
+  html += '<div class="form-group"><label>Email</label><input type="email" id="psteam-av-email" value="' + (t ? escHtml(t.avvocatoEmail) : '') + '"></div>';
+  html += '<div class="form-group"><label>Telefono</label><input type="text" id="psteam-av-tel" value="' + (t ? escHtml(t.avvocatoTel) : '') + '"></div>';
+  html += '</div></div>';
+
+  html += '<div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button><button type="submit" class="btn btn-primary">Salva CVS</button></div>';
+  html += '</form>';
+  openModal(t ? 'Modifica CVS' : 'Assegna CVS', html, true);
+}
+
+function savePSTeam(e) {
+  e.preventDefault();
+  var obj = {
+    strutturaId: document.getElementById('psteam-struttura').value,
+    dataDelibera: document.getElementById('psteam-delibera').value,
+    riskManagerNome: document.getElementById('psteam-rm-nome').value,
+    riskManagerEmail: document.getElementById('psteam-rm-email').value,
+    riskManagerTel: document.getElementById('psteam-rm-tel').value,
+    medicoLegaleNome: document.getElementById('psteam-ml-nome').value,
+    medicoLegaleEmail: document.getElementById('psteam-ml-email').value,
+    medicoLegaleTel: document.getElementById('psteam-ml-tel').value,
+    lossAdjusterNome: document.getElementById('psteam-la-nome').value,
+    lossAdjusterEmail: document.getElementById('psteam-la-email').value,
+    lossAdjusterTel: document.getElementById('psteam-la-tel').value,
+    avvocatoNome: document.getElementById('psteam-av-nome').value,
+    avvocatoEmail: document.getElementById('psteam-av-email').value,
+    avvocatoTel: document.getElementById('psteam-av-tel').value
+  };
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      closeModal();
+      showToast('CVS salvato');
+      renderPSTabCVS(PS_STATE.struttura.id);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .salvaTeam(STATE.token, obj);
+}
+
+// ── TAB CALENDARIO / AGENDA ──
+function renderPSTabAgenda(strutturaId) {
+  var panel = document.getElementById('ps-panel-agenda');
+  panel.innerHTML = '<div class="empty-state"><span class="spinner"></span><br>Caricamento calendario...</div>';
+
+  google.script.run
+    .withSuccessHandler(function(eventi) {
+      PS_STATE.agenda = eventi;
+      var badge = document.getElementById('ps-badge-age');
+      if (badge) { badge.textContent = eventi.length; badge.style.display = eventi.length ? 'inline-block' : 'none'; }
+
+      var html = '<div class="card">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px;">';
+      html += '<div class="card-title" style="margin-bottom:0;">&#x1F4C5; Calendario Eventi</div>';
+      html += '<button class="btn btn-primary" onclick="openPSAgendaForm()">+ Nuovo Evento</button>';
+      html += '</div>';
+      html += '<div style="overflow-x:auto;"><table class="data-table"><thead><tr>';
+      html += '<th>Data</th><th>Ora</th><th>Tipo</th><th>ODG</th><th>Partecipanti</th><th style="width:100px;">Azioni</th>';
+      html += '</tr></thead><tbody>';
+      html += renderPSAgendaRows(eventi);
+      html += '</tbody></table></div></div>';
+      panel.innerHTML = html;
+    })
+    .withFailureHandler(function(e) { panel.innerHTML = '<div class="empty-state">Errore: ' + escHtml(e.message) + '</div>'; })
+    .getAgenda(STATE.token, strutturaId);
+}
+
+function renderPSAgendaRows(rows) {
+  if (rows.length === 0) return '<tr><td colspan="6" class="empty-state">Nessun evento programmato. Clicca "Nuovo Evento" per aggiungerne uno.</td></tr>';
+  var h = '';
+  for (var i = 0; i < rows.length; i++) {
+    var a = rows[i];
+    h += '<tr>';
+    h += '<td>' + fmtDate(a.data) + '</td>';
+    h += '<td>' + escHtml(a.ora) + '</td>';
+    h += '<td><span class="badge badge-aperta">' + escHtml(a.tipo) + '</span></td>';
+    h += '<td>' + escHtml(a.odg) + '</td>';
+    h += '<td>' + escHtml(a.partecipanti) + '</td>';
+    h += '<td><button class="btn btn-sm btn-secondary" onclick="openPSAgendaForm(' + i + ')">&#x270F;&#xFE0F;</button> ';
+    h += '<button class="btn btn-sm btn-danger" onclick="deletePSAgenda(\'' + escHtml(a.id) + '\')">&#x1F5D1;&#xFE0F;</button></td>';
+    h += '</tr>';
+  }
+  return h;
+}
+
+function openPSAgendaForm(idx) {
+  var a = (idx !== undefined && PS_STATE.agenda[idx]) ? PS_STATE.agenda[idx] : null;
+  var html = '<form onsubmit="savePSAgenda(event)">';
+  html += '<input type="hidden" id="psage-id" value="' + (a ? escHtml(a.id) : '') + '">';
+  html += '<input type="hidden" id="psage-struttura" value="' + escHtml(PS_STATE.struttura.id) + '">';
+  html += '<div class="form-grid">';
+  html += '<div class="form-group"><label>Data *</label><input type="date" id="psage-data" required value="' + (a && a.data ? String(a.data).substring(0,10) : '') + '"></div>';
+  html += '<div class="form-group"><label>Ora</label><input type="time" id="psage-ora" value="' + (a ? escHtml(a.ora) : '') + '"></div>';
+  html += '<div class="form-group"><label>Tipo *</label><select id="psage-tipo" required><option value="">Seleziona...</option><option value="riunione"' + (a && a.tipo==='riunione'?' selected':'') + '>Riunione</option><option value="udienza"' + (a && a.tipo==='udienza'?' selected':'') + '>Udienza</option><option value="perizia"' + (a && a.tipo==='perizia'?' selected':'') + '>Perizia</option><option value="collegiale"' + (a && a.tipo==='collegiale'?' selected':'') + '>Collegiale</option><option value="altro"' + (a && a.tipo==='altro'?' selected':'') + '>Altro</option></select></div>';
+  html += '<div class="form-group full"><label>Ordine del Giorno</label><textarea id="psage-odg">' + (a ? escHtml(a.odg) : '') + '</textarea></div>';
+  html += '<div class="form-group full"><label>Partecipanti</label><textarea id="psage-part">' + (a ? escHtml(a.partecipanti) : '') + '</textarea></div>';
+  html += '<div class="form-group full"><label>Note</label><textarea id="psage-note">' + (a ? escHtml(a.note) : '') + '</textarea></div>';
+  html += '</div>';
+  html += '<div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;"><button type="button" class="btn btn-secondary" onclick="closeModal()">Annulla</button><button type="submit" class="btn btn-primary">Salva Evento</button></div>';
+  html += '</form>';
+  openModal(a ? 'Modifica Evento' : 'Nuovo Evento', html);
+}
+
+function savePSAgenda(e) {
+  e.preventDefault();
+  var obj = {
+    id: document.getElementById('psage-id').value,
+    data: document.getElementById('psage-data').value,
+    ora: document.getElementById('psage-ora').value,
+    tipo: document.getElementById('psage-tipo').value,
+    strutturaId: document.getElementById('psage-struttura').value,
+    odg: document.getElementById('psage-odg').value,
+    partecipanti: document.getElementById('psage-part').value,
+    note: document.getElementById('psage-note').value
+  };
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      closeModal();
+      showToast('Evento salvato');
+      renderPSTabAgenda(PS_STATE.struttura.id);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .salvaAgenda(STATE.token, obj);
+}
+
+function deletePSAgenda(id) {
+  if (!confirm('Eliminare questo evento?')) return;
+  google.script.run
+    .withSuccessHandler(function(res) {
+      if (res.error) { showToast(res.error, 'error'); return; }
+      showToast('Evento eliminato');
+      renderPSTabAgenda(PS_STATE.struttura.id);
+    })
+    .withFailureHandler(function(e) { showToast(e.message, 'error'); })
+    .eliminaAgenda(STATE.token, id);
+}
+</script>
+</body>
+</html>
